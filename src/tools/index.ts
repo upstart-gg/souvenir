@@ -31,23 +31,27 @@ export function createSouvenirTools(souvenir: Souvenir) {
           metadata,
         });
 
-        // Process the chunks immediately
-        await souvenir.processAll({ sessionId, generateEmbeddings: true });
+        // Process the chunks immediately with summaries (per paper)
+        await souvenir.processAll({
+          sessionId,
+          generateEmbeddings: true,
+          generateSummaries: true,
+        });
 
         return {
           success: true,
           chunkIds,
-          message: `Stored ${chunkIds.length} memory chunk(s)`,
+          message: `Stored ${chunkIds.length} memory chunk(s) with summaries`,
         };
       },
     }),
 
     /**
-     * Search memory for relevant information
+     * Search memory using vector similarity (default strategy)
      */
     searchMemory: tool({
       description:
-        'Search long-term memory for relevant information. Use this when you need to recall facts, preferences, or past context.',
+        'Search long-term memory for relevant information using semantic similarity. Use this when you need to recall facts, preferences, or past context.',
       parameters: z.object({
         query: z.string().describe('What to search for in memory'),
         sessionId: z
@@ -55,11 +59,16 @@ export function createSouvenirTools(souvenir: Souvenir) {
           .optional()
           .describe('Optional session ID to limit search to specific context'),
         limit: z.number().optional().describe('Maximum number of results to return (default: 5)'),
+        strategy: z
+          .enum(['vector', 'graph-neighborhood', 'graph-completion', 'graph-summary', 'hybrid'])
+          .optional()
+          .describe('Retrieval strategy (default: vector)'),
       }),
-      execute: async ({ query, sessionId, limit = 5 }) => {
+      execute: async ({ query, sessionId, limit = 5, strategy = 'vector' }) => {
         const results = await souvenir.search(query, {
           sessionId,
           limit,
+          strategy,
           includeRelationships: true,
         });
 
@@ -68,13 +77,40 @@ export function createSouvenirTools(souvenir: Souvenir) {
           results: results.map((r) => ({
             content: r.node.content,
             score: r.score,
+            type: r.node.nodeType,
             metadata: r.node.metadata,
             relationships: r.relationships?.length || 0,
           })),
           message:
             results.length > 0
-              ? `Found ${results.length} relevant memories`
+              ? `Found ${results.length} relevant memories using ${strategy} strategy`
               : 'No relevant memories found',
+        };
+      },
+    }),
+
+    /**
+     * Search using graph retrieval with formatted context (NEW - from paper)
+     */
+    searchGraph: tool({
+      description:
+        'Search memory using knowledge graph traversal and get results formatted for reasoning. Best for multi-hop questions requiring relationship understanding.',
+      parameters: z.object({
+        query: z.string().describe('What to search for in the knowledge graph'),
+        sessionId: z.string().optional().describe('Optional session ID'),
+        limit: z.number().optional().describe('Number of graph neighborhoods to return'),
+      }),
+      execute: async ({ query, sessionId, limit = 3 }) => {
+        const formattedContext = await souvenir.searchGraph(query, {
+          sessionId,
+          limit,
+        });
+
+        return {
+          success: true,
+          context: formattedContext.content,
+          sources: formattedContext.sources.length,
+          message: `Retrieved ${formattedContext.sources.length} graph contexts`,
         };
       },
     }),

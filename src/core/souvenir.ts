@@ -2,18 +2,28 @@ import { DatabaseClient } from '../db/client.js';
 import { MemoryRepository } from '../db/repository.js';
 import { GraphOperations } from '../graph/operations.js';
 import { SouvenirProcessor } from './processor.js';
+import { RetrievalStrategies } from './retrieval.js';
 import { chunkText } from '../utils/chunking.js';
+import {
+  formatSearchResultsForLLM,
+  formatGraphRetrievalForLLM,
+  formatHybridContextForLLM,
+} from '../utils/formatting.js';
 import {
   SouvenirConfig,
   AddOptions,
   SearchOptions,
   SouvenirProcessOptions,
   SearchResult,
+  GraphRetrievalResult,
+  FormattedContext,
   MemoryNode,
   MemorySession,
   EmbeddingProvider,
   GraphPath,
   TraversalOptions,
+  PromptTemplates,
+  SummaryMetadata,
 } from '../types.js';
 import type { EmbedParams } from 'ai';
 
@@ -21,11 +31,13 @@ import type { EmbedParams } from 'ai';
  * Main Souvenir class - Memory management for AI agents
  *
  * Uses an ETL-inspired pipeline: Extract, Transform, Load
+ * Implements retrieval strategies from the Cognee paper
  */
 export class Souvenir {
   private db: DatabaseClient;
   private repository: MemoryRepository;
   private graph: GraphOperations;
+  private retrieval: RetrievalStrategies;
   private processor?: SouvenirProcessor;
   private embedding?: EmbeddingProvider;
 
@@ -34,6 +46,7 @@ export class Souvenir {
     options?: {
       embeddingProvider?: EmbeddingProvider;
       processorModel?: Parameters<typeof import('ai').generateText>[0]['model'];
+      promptTemplates?: Partial<PromptTemplates>;
     }
   ) {
     this.db = new DatabaseClient(config.databaseUrl);
@@ -45,8 +58,18 @@ export class Souvenir {
     }
 
     if (options?.processorModel) {
-      this.processor = new SouvenirProcessor(options.processorModel);
+      this.processor = new SouvenirProcessor(
+        options.processorModel,
+        options.promptTemplates
+      );
     }
+
+    // Initialize retrieval strategies
+    this.retrieval = new RetrievalStrategies(
+      this.repository,
+      this.graph,
+      this.embedding
+    );
   }
 
   // ============ Core API ============
@@ -83,9 +106,10 @@ export class Souvenir {
   /**
    * Process chunks into memory nodes (Transform phase)
    * Extracts entities, relationships, and generates embeddings
+   * Optionally generates summary nodes (per paper)
    */
   async processAll(options: SouvenirProcessOptions = {}): Promise<void> {
-    const { generateEmbeddings = true, sessionId } = options;
+    const { generateEmbeddings = true, generateSummaries = false, sessionId } = options;
 
     const chunks = await this.repository.getUnprocessedChunks();
 
@@ -95,28 +119,37 @@ export class Souvenir {
 
     // Process chunks in batches
     const batchSize = 10;
+    const processedNodeIds: string[] = [];
+
     for (let i = 0; i < chunks.length; i += batchSize) {
       const batch = chunks.slice(i, i + batchSize);
-      await Promise.all(
+      const results = await Promise.all(
         batch.map((chunk) => this.processChunk(chunk, { ...options, generateEmbeddings }))
       );
+      // Collect node IDs for summary generation
+      processedNodeIds.push(...results.filter((id) => id !== null) as string[]);
     }
 
-      // If session provided, create relationships between nodes in session
+    // If session provided, create relationships between nodes in session
     if (sessionId && this.processor) {
       await this.createSessionRelationships(sessionId);
+    }
+
+    // Generate session summary if requested (per paper)
+    if (generateSummaries && sessionId && this.processor && processedNodeIds.length > 0) {
+      await this.generateSessionSummary(sessionId, processedNodeIds);
     }
   }
 
   /**
-   * Process a single chunk
+   * Process a single chunk and return the chunk node ID
    */
   private async processChunk(
     chunk: typeof this.repository extends MemoryRepository
       ? Awaited<ReturnType<MemoryRepository['createChunk']>>
       : never,
     options: SouvenirProcessOptions & { generateEmbeddings?: boolean }
-  ): Promise<void> {
+  ): Promise<string | null> {
     const { sessionId, generateEmbeddings = true } = options;
 
     // Generate embedding for the chunk
@@ -204,6 +237,66 @@ export class Souvenir {
 
     // Mark chunk as processed
     await this.repository.markChunkProcessed(chunk.id);
+
+    // Return the chunk node ID
+    return chunkNode.id;
+  }
+
+  /**
+   * Generate a summary node for a session (per paper)
+   */
+  private async generateSessionSummary(
+    sessionId: string,
+    nodeIds: string[]
+  ): Promise<void> {
+    if (!this.processor || !this.embedding) {
+      return;
+    }
+
+    // Get content from nodes
+    const nodes = await Promise.all(nodeIds.map((id) => this.repository.getNode(id)));
+    const validNodes = nodes.filter((n) => n !== null) as MemoryNode[];
+
+    if (validNodes.length === 0) {
+      return;
+    }
+
+    // Generate summary
+    const contents = validNodes.map((n) => n.content);
+    const summary = await this.processor.generateMultiContentSummary(contents, 'session', 500);
+
+    // Generate embedding for summary
+    const summaryEmbedding = await this.embedding.embed(summary);
+
+    // Create summary node
+    const summaryMetadata: SummaryMetadata = {
+      summaryOf: 'session',
+      sourceIds: nodeIds,
+      summaryLength: summary.length,
+      generatedAt: new Date(),
+    };
+
+    const summaryNode = await this.repository.createNode(
+      summary,
+      summaryEmbedding,
+      'summary',
+      summaryMetadata
+    );
+
+    // Add summary node to session
+    await this.repository.addNodeToSession(sessionId, summaryNode.id);
+
+    // Create relationships from summary to source nodes
+    for (const nodeId of nodeIds.slice(0, 10)) {
+      // Limit to avoid too many edges
+      await this.repository.createRelationship(
+        summaryNode.id,
+        nodeId,
+        'summarizes',
+        1.0,
+        {}
+      );
+    }
   }
 
   /**
@@ -238,54 +331,86 @@ export class Souvenir {
   }
 
   /**
-   * Search memory using vector similarity
+   * Search memory using configurable retrieval strategies (per paper)
+   * Defaults to vector retrieval for backward compatibility
    */
   async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
-    if (!this.embedding) {
-      throw new Error('Embedding provider not configured');
-    }
+    const strategy = options.strategy || 'vector';
+    const formatForLLM = options.formatForLLM || false;
 
-    const {
-      sessionId,
-      nodeTypes,
-      limit = this.config.maxResults,
-      minScore = this.config.minRelevanceScore,
-      includeRelationships = false,
-      relationshipTypes,
-    } = options;
+    // Use appropriate retrieval strategy
+    switch (strategy) {
+      case 'vector':
+        return this.retrieval.vectorRetrieval(query, options);
 
-    // Generate embedding for query
-    const queryEmbedding = await this.embedding.embed(query);
-
-    // Search by vector
-    let results = await this.repository.searchByVector(
-      queryEmbedding,
-      limit * 2, // Get more initially for filtering
-      minScore,
-      nodeTypes
-    );
-
-    // Filter by session if provided
-    if (sessionId) {
-      const sessionNodes = await this.repository.getNodesInSession(sessionId);
-      const sessionNodeIds = new Set(sessionNodes.map((n) => n.id));
-      results = results.filter((r) => sessionNodeIds.has(r.node.id));
-    }
-
-    // Limit to requested number
-    results = results.slice(0, limit);
-
-    // Include relationships if requested
-    if (includeRelationships) {
-      for (const result of results) {
-        result.relationships = await this.repository.getRelationshipsForNode(
-          result.node.id,
-          relationshipTypes
+      case 'graph-neighborhood':
+        const neighborhoodResults = await this.retrieval.graphNeighborhoodRetrieval(
+          query,
+          options
         );
-      }
-    }
+        // Convert GraphRetrievalResult to SearchResult for backward compatibility
+        return neighborhoodResults.map((gr) => ({
+          node: gr.node,
+          score: gr.score,
+          relationships: gr.neighborhood.relationships,
+        }));
 
-    return results;
+      case 'graph-completion':
+        const completionResults = await this.retrieval.graphCompletionRetrieval(query, options);
+        return completionResults.map((gr) => ({
+          node: gr.node,
+          score: gr.score,
+          relationships: gr.neighborhood.relationships,
+        }));
+
+      case 'graph-summary':
+        const summaryResults = await this.retrieval.graphSummaryCompletionRetrieval(
+          query,
+          options
+        );
+        return summaryResults.map((gr) => ({
+          node: gr.node,
+          score: gr.score,
+          relationships: gr.neighborhood.relationships,
+        }));
+
+      case 'hybrid':
+        const hybridResults = await this.retrieval.hybridRetrieval(query, options);
+        // Combine and deduplicate
+        const allResults = [...hybridResults.vectorResults];
+        const seenIds = new Set(allResults.map((r) => r.node.id));
+
+        for (const gr of hybridResults.graphResults) {
+          if (!seenIds.has(gr.node.id)) {
+            allResults.push({
+              node: gr.node,
+              score: gr.score,
+              relationships: gr.neighborhood.relationships,
+            });
+          }
+        }
+        return allResults;
+
+      default:
+        throw new Error(`Unknown retrieval strategy: ${strategy}`);
+    }
+  }
+
+  /**
+   * Search with graph neighborhood retrieval and get formatted context
+   * Optimized for LLM consumption (per paper)
+   */
+  async searchGraph(query: string, options: SearchOptions = {}): Promise<FormattedContext> {
+    const results = await this.retrieval.graphCompletionRetrieval(query, options);
+    return formatGraphRetrievalForLLM(results);
+  }
+
+  /**
+   * Search with hybrid strategy and get formatted context
+   */
+  async searchHybrid(query: string, options: SearchOptions = {}): Promise<FormattedContext> {
+    const { vectorResults, graphResults } = await this.retrieval.hybridRetrieval(query, options);
+    return formatHybridContextForLLM(vectorResults, graphResults);
   }
 
   // ============ Session Management ============

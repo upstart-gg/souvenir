@@ -10,13 +10,17 @@ Souvenir provides efficient and context-aware memory capabilities for AI agents,
 
 ## Features
 
-- 🔍 **Semantic Search** - Vector-based similarity search using pgvector
-- 🕸️ **Knowledge Graphs** - Relationship-aware memory with graph traversal
-- 🧩 **Entity Extraction** - Automatic entity and relationship detection
+**Based on research from** *"Optimizing the Interface Between Knowledge Graphs and LLMs for Complex Reasoning"* ([arXiv:2505.24478](https://arxiv.org/abs/2505.24478))
+
+- 🔍 **Multiple Retrieval Strategies** - Vector, graph-neighborhood, graph-completion, graph-summary, and hybrid modes
+- 🕸️ **Knowledge Graphs** - Relationship-aware memory with graph traversal and formatted triplets for LLMs
+- 📝 **Summary Nodes** - Automatic session and subgraph summarization for better retrieval
+- 🧩 **Entity Extraction** - Configurable LLM-powered entity and relationship detection
+- 🎨 **Context Formatting** - Optimized graph context formatting for LLM consumption
 - 🔄 **Multi-Runtime Support** - Works on Node.js 20+, Bun, Deno, and Cloudflare Workers
 - 🛠️ **Pre-built Tools** - Ready-to-use tools for Vercel AI SDK v5
 - 📦 **Type-Safe** - Full TypeScript support with comprehensive types
-- 🎯 **ETL Pipeline** - Extract, Transform, Load architecture for memory processing
+- 🎯 **ETL Pipeline** - Extract, Transform, Load architecture
 
 ## Installation
 
@@ -69,16 +73,28 @@ await souvenir.add('The user prefers dark mode in their IDE.', {
   sessionId: session.id,
 });
 
-// Process the data (extract entities, relationships, generate embeddings)
-await souvenir.processAll({ sessionId: session.id });
+// Process with summaries (paper-based optimization)
+await souvenir.processAll({
+  sessionId: session.id,
+  generateEmbeddings: true,
+  generateSummaries: true, // Generate summary nodes
+});
 
-// Search memories
+// Search with graph retrieval strategy (paper-based)
 const results = await souvenir.search('What are the user preferences?', {
   sessionId: session.id,
+  strategy: 'graph-completion', // Use graph-based retrieval
 });
 
 console.log(results[0].node.content); // "The user prefers dark mode..."
 ```
+
+**New! Retrieval Strategies** (from paper):
+- `vector` - Traditional semantic search
+- `graph-neighborhood` - Retrieve connected graph nodes
+- `graph-completion` - Format graph triplets for LLM reasoning
+- `graph-summary` - Use summary nodes for retrieval
+- `hybrid` - Combine multiple strategies
 
 ## Using with Vercel AI SDK Tools
 
