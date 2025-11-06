@@ -24,10 +24,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "bun run build:clean && bun run build:bundle && bun run build:types",
-    "build:clean": "rm -rf dist",
-    "build:bundle": "bun build ./src/index.ts --outdir ./dist --target node --format esm && bun build ./src/index.ts --outdir ./dist --target node --format cjs --outfile index.cjs && bun build ./src/tools/index.ts --outdir ./dist/tools --target node --format esm && bun build ./src/tools/index.ts --outdir ./dist/tools --target node --format cjs --outfile index.cjs",
-    "build:types": "tsc --emitDeclarationOnly --declaration --outDir dist",
+    "build": "bunup",
     "test": "bun test",
     "test:coverage": "bun test --coverage",
     "test:watch": "bun test --watch",
@@ -36,7 +33,7 @@
     "lint:fix": "biome check --write src",
     "format": "biome format --write src",
     "format:check": "biome format src",
-    "release": "bunup && bun run build && changeset publish",
+    "release": "bun run build && changeset publish",
     "prepublishOnly": "bun run build && bun run test"
   },
   "keywords": [
@@ -68,7 +65,7 @@
     "typescript": "^5.6.3"
   },
   "dependencies": {
-    "chonkiejs": "^0.2.10",
+    "@chonkiejs/core": "^0.0.5",
     "postgres": "^3.4.5"
   },
   "peerDependencies": {

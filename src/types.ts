@@ -10,6 +10,9 @@ export const SouvenirConfigSchema = z.object({
   chunkOverlap: z.number().default(200),
   minRelevanceScore: z.number().min(0).max(1).default(0.7),
   maxResults: z.number().default(10),
+  chunkingMode: z.enum(['token', 'recursive']).default('token'),
+  chunkingTokenizer: z.string().optional(),
+  minCharactersPerChunk: z.number().optional(),
 });
 
 export type SouvenirConfig = z.infer<typeof SouvenirConfigSchema>;

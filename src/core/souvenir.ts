@@ -82,10 +82,22 @@ export class Souvenir {
     const { sourceIdentifier, metadata = {}, sessionId } = options;
 
     // Chunk the data
-    const chunks = chunkText(data, {
-      chunkSize: this.config.chunkSize,
-      chunkOverlap: this.config.chunkOverlap,
-    });
+    const chunks = await chunkText(
+      data,
+      this.config.chunkingMode === 'recursive'
+        ? {
+            mode: 'recursive',
+            chunkSize: this.config.chunkSize,
+            tokenizer: this.config.chunkingTokenizer,
+            minCharactersPerChunk: this.config.minCharactersPerChunk,
+          }
+        : {
+            mode: 'token',
+            chunkSize: this.config.chunkSize,
+            chunkOverlap: this.config.chunkOverlap,
+            tokenizer: this.config.chunkingTokenizer,
+          }
+    );
 
     const chunkIds: string[] = [];
 

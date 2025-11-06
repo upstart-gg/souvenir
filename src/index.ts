@@ -18,7 +18,14 @@ export { MemoryRepository } from './db/repository.js';
 export * from './types.js';
 
 // Re-export utilities
-export { chunkText, calculateChunkSize } from './utils/chunking.js';
+export {
+  chunkText,
+  calculateChunkSize,
+  type ChunkOptions,
+  type RecursiveChunkOptions,
+  type TokenChunkOptions,
+  type RecursiveRulesConfig,
+} from './utils/chunking.js';
 export {
   formatSearchResultsForLLM,
   formatGraphRetrievalForLLM,

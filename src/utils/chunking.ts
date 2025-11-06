@@ -2,40 +2,94 @@
  * Text chunking utilities using chonkiejs
  */
 
-import { SemanticChunker, TokenChunker } from 'chonkiejs';
+import { RecursiveChunker, TokenChunker, RecursiveRules } from '@chonkiejs/core';
+import type { RecursiveLevelConfig } from '@chonkiejs/core';
 
-export interface ChunkOptions {
+export interface RecursiveChunkOptions {
+  mode: 'recursive';
   chunkSize: number;
-  chunkOverlap: number;
-  separator?: string;
-  mode?: 'semantic' | 'token';
+  tokenizer?: string;
+  minCharactersPerChunk?: number;
+  rules?: RecursiveRulesConfig;
 }
+
+export interface TokenChunkOptions {
+  mode: 'token';
+  chunkSize: number;
+  chunkOverlap?: number;
+  tokenizer?: string;
+}
+
+export interface RecursiveRulesConfig {
+  levels?: RecursiveLevelConfig[];
+}
+
+export type ChunkOptions = RecursiveChunkOptions | TokenChunkOptions;
 
 /**
  * Split text into chunks using chonkiejs
  */
-export function chunkText(text: string, options: ChunkOptions): string[] {
-  const { chunkSize, chunkOverlap, mode = 'token' } = options;
-
+export async function chunkText(
+  text: string,
+  options: ChunkOptions
+): Promise<string[]> {
   try {
-    if (mode === 'semantic') {
-      // Use semantic chunking for better content-aware splitting
-      const chunker = new SemanticChunker();
-      const chunks = chunker.chunk(text);
+    if (options.mode === 'recursive') {
+      // Use recursive chunking with hierarchical splitting
+      const chunkerConfig: {
+        chunkSize: number;
+        tokenizer?: string;
+        minCharactersPerChunk?: number;
+        rules?: RecursiveRules;
+      } = {
+        chunkSize: options.chunkSize,
+      };
+
+      if (options.tokenizer) {
+        chunkerConfig.tokenizer = options.tokenizer;
+      }
+
+      if (options.minCharactersPerChunk !== undefined) {
+        chunkerConfig.minCharactersPerChunk = options.minCharactersPerChunk;
+      }
+
+      if (options.rules) {
+        chunkerConfig.rules = new RecursiveRules(options.rules);
+      }
+
+      const chunker = await RecursiveChunker.create(chunkerConfig);
+      const chunks = await chunker.chunk(text);
       return chunks.map((chunk) => chunk.text);
     } else {
-      // Use token-based chunking for more precise control
-      const chunker = new TokenChunker({
-        chunkSize,
-        chunkOverlap,
-      });
-      const chunks = chunker.chunk(text);
+      // Use token-based chunking for fixed-size chunks with overlap
+      const chunkerConfig: {
+        chunkSize: number;
+        chunkOverlap?: number;
+        tokenizer?: string;
+      } = {
+        chunkSize: options.chunkSize,
+      };
+
+      if (options.chunkOverlap !== undefined) {
+        chunkerConfig.chunkOverlap = options.chunkOverlap;
+      }
+
+      if (options.tokenizer) {
+        chunkerConfig.tokenizer = options.tokenizer;
+      }
+
+      const chunker = await TokenChunker.create(chunkerConfig);
+      const chunks = await chunker.chunk(text);
       return chunks.map((chunk) => chunk.text);
     }
   } catch (error) {
     // Fallback to simple splitting if chonkiejs fails
     console.warn('Chonkiejs chunking failed, falling back to simple split:', error);
-    return fallbackChunk(text, chunkSize, chunkOverlap);
+    return fallbackChunk(
+      text,
+      options.chunkSize,
+      options.mode === 'token' ? options.chunkOverlap || 0 : 0
+    );
   }
 }
 

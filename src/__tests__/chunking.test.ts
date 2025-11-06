@@ -3,17 +3,25 @@ import { chunkText, calculateChunkSize } from '../utils/chunking.js';
 
 describe('chunking', () => {
   describe('chunkText', () => {
-    test('should split text into chunks', () => {
+    test('should split text into chunks with token mode', async () => {
       const text = 'a'.repeat(2000);
-      const chunks = chunkText(text, { chunkSize: 500, chunkOverlap: 100 });
+      const chunks = await chunkText(text, {
+        mode: 'token',
+        chunkSize: 500,
+        chunkOverlap: 100,
+      });
 
       expect(chunks.length).toBeGreaterThan(1);
       expect(chunks[0].length).toBeLessThanOrEqual(500);
     });
 
-    test('should create overlapping chunks', () => {
+    test('should create overlapping chunks', async () => {
       const text = 'This is sentence one.\n\nThis is sentence two.\n\nThis is sentence three.';
-      const chunks = chunkText(text, { chunkSize: 50, chunkOverlap: 20 });
+      const chunks = await chunkText(text, {
+        mode: 'token',
+        chunkSize: 50,
+        chunkOverlap: 20,
+      });
 
       // Should have overlap between chunks
       if (chunks.length > 1) {
@@ -21,20 +29,45 @@ describe('chunking', () => {
       }
     });
 
-    test('should handle small text', () => {
+    test('should handle small text', async () => {
       const text = 'Short text';
-      const chunks = chunkText(text, { chunkSize: 1000, chunkOverlap: 200 });
+      const chunks = await chunkText(text, {
+        mode: 'token',
+        chunkSize: 1000,
+        chunkOverlap: 200,
+      });
 
       expect(chunks).toHaveLength(1);
       expect(chunks[0]).toBe(text);
     });
 
-    test('should respect separators', () => {
+    test('should work with recursive mode', async () => {
       const text = 'Para 1\n\nPara 2\n\nPara 3';
-      const chunks = chunkText(text, {
+      const chunks = await chunkText(text, {
+        mode: 'recursive',
         chunkSize: 20,
-        chunkOverlap: 5,
-        separator: '\n\n',
+      });
+
+      expect(chunks.length).toBeGreaterThan(0);
+    });
+
+    test('should support custom tokenizer', async () => {
+      const text = 'This is a test of tokenization';
+      const chunks = await chunkText(text, {
+        mode: 'token',
+        chunkSize: 100,
+        tokenizer: 'character',
+      });
+
+      expect(chunks.length).toBeGreaterThan(0);
+    });
+
+    test('should support minCharactersPerChunk in recursive mode', async () => {
+      const text = 'Short. Text. With. Periods.';
+      const chunks = await chunkText(text, {
+        mode: 'recursive',
+        chunkSize: 50,
+        minCharactersPerChunk: 10,
       });
 
       expect(chunks.length).toBeGreaterThan(0);
