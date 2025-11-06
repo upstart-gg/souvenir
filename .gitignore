@@ -11,6 +11,10 @@ coverage/
 dist/
 build/
 
+# Docs
+docs/.vitepress/dist/
+docs/.vitepress/cache/
+
 # Misc
 .DS_Store
 *.log
