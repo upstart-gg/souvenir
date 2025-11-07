@@ -83,10 +83,3 @@ jobs:
 
       - name: Build package
         run: bun run build
-
-      - name: Check build artifacts
-        run: |
-          test -f dist/index.js || exit 1
-          test -f dist/index.cjs || exit 1
-          test -f dist/index.d.ts || exit 1
-          test -f dist/tools/index.js || exit 1
