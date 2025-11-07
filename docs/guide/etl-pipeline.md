@@ -59,6 +59,63 @@ See [Chunking Configuration](/guide/chunking) for advanced options.
 
 The transform phase processes chunks to extract structured information.
 
+### Auto-Processing with Timer-Based Batching
+
+By default, Souvenir uses **automatic batched processing** to optimize efficiency and reduce LLM API calls:
+
+```typescript
+const souvenir = new Souvenir(
+  {
+    databaseUrl: process.env.DATABASE_URL!,
+    autoProcessing: true,       // Enable auto-processing (default: true)
+    autoProcessDelay: 1000,     // Debounce delay in ms (default: 1000)
+    autoProcessBatchSize: 10,   // Chunks per batch (default: 10)
+  },
+  { /* ... */ }
+);
+
+// Multiple rapid add() calls accumulate unprocessed chunks
+await souvenir.add('Document 1...');
+await souvenir.add('Document 2...');
+await souvenir.add('Document 3...');
+// Processing is automatically scheduled after 1000ms of inactivity
+// All 3 documents will be processed together in one batch
+```
+
+**How it works:**
+- Each `add()` call resets the processing timer
+- When the timer expires, all pending chunks are processed together
+- This batches multiple LLM API calls for better efficiency and cost optimization
+
+**Force immediate processing when needed:**
+
+```typescript
+// Force processing before searching
+await souvenir.forceMemoryProcessing({
+  generateEmbeddings: true,
+  generateSummaries: false,
+});
+
+// Now search immediately
+const results = await souvenir.search('query');
+```
+
+**Disable auto-processing for manual control:**
+
+```typescript
+const souvenir = new Souvenir(
+  {
+    databaseUrl: process.env.DATABASE_URL!,
+    autoProcessing: false, // Disable auto-processing
+  },
+  { /* ... */ }
+);
+
+// Manually control when to process
+await souvenir.add('Content...');
+await souvenir.processAll({ generateEmbeddings: true });
+```
+
 ### Entity Extraction
 
 Entities are the "nodes" in your knowledge graph:
@@ -247,12 +304,11 @@ const souvenir = new Souvenir(
 );
 
 // EXTRACT: Add content
-const sessionId = 'demo';
-await souvenir.add('Paris is the capital of France...', { sessionId });
+await souvenir.add('Paris is the capital of France...');
 
-// TRANSFORM: Process and extract entities/relationships
-await souvenir.processAll({
-  sessionId,
+// TRANSFORM: Auto-batching processes chunks in the background
+// You can force immediate processing before searching:
+await souvenir.forceMemoryProcessing({
   generateEmbeddings: true,
   generateSummaries: true,
 });
@@ -261,31 +317,45 @@ await souvenir.processAll({
 
 // RETRIEVE: Search using different strategies
 const vectorResults = await souvenir.search('capital of France', {
-  sessionId,
   strategy: 'vector',
 });
 
-const graphContext = await souvenir.searchGraph('Tell me about Paris', {
-  sessionId,
-});
+const graphContext = await souvenir.searchGraph('Tell me about Paris');
 
 console.log(graphContext.content);
 ```
 
 ## Best Practices
 
-### 1. Batch Processing
+### 1. Leverage Auto-Batching
 
-Process multiple additions in one go:
+Let Souvenir automatically batch your processing:
 
 ```typescript
-// Add all content first
-await souvenir.add('Document 1...', { sessionId });
-await souvenir.add('Document 2...', { sessionId });
-await souvenir.add('Document 3...', { sessionId });
+// Auto-batching is enabled by default
+// Multiple rapid add() calls are automatically batched
+await souvenir.add('Document 1...');
+await souvenir.add('Document 2...');
+await souvenir.add('Document 3...');
+// Processing happens automatically after the configured delay
 
-// Then process all at once
-await souvenir.processAll({ sessionId, generateEmbeddings: true });
+// Force processing only when needed (e.g., before search)
+await souvenir.forceMemoryProcessing({ generateEmbeddings: true });
+```
+
+**For manual control:**
+
+```typescript
+// Disable auto-processing in config
+const souvenir = new Souvenir(
+  { databaseUrl: '...', autoProcessing: false },
+  { /* ... */ }
+);
+
+// Manually batch process
+await souvenir.add('Document 1...');
+await souvenir.add('Document 2...');
+await souvenir.processAll({ generateEmbeddings: true });
 ```
 
 ### 2. Session Organization
@@ -317,16 +387,19 @@ await souvenir.processAll({
 
 ### 4. Incremental Updates
 
-Add new content incrementally:
+Add new content incrementally with auto-batching:
 
 ```typescript
 // Initial load
-await souvenir.add('Initial content...', { sessionId });
-await souvenir.processAll({ sessionId });
+await souvenir.add('Initial content...');
+// Processing happens automatically after the delay
 
 // Later, add more content
-await souvenir.add('New content...', { sessionId });
-await souvenir.processAll({ sessionId }); // Only processes new chunks
+await souvenir.add('New content...');
+// Only new chunks are processed automatically
+
+// Force processing if you need immediate results
+await souvenir.forceMemoryProcessing({ generateEmbeddings: true });
 ```
 
 ## Next Steps
