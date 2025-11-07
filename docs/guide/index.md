@@ -6,10 +6,10 @@
 
 Souvenir provides memory tools for AI agents. When added to your agent, it automatically:
 
-- ✅ **Stores memories** when the agent encounters important information
-- ✅ **Retrieves memories** when relevant to the conversation
-- ✅ **Builds a knowledge graph** of entities and their relationships
-- ✅ **Maintains context** across multiple conversations
+- **Stores memories** when the agent encounters important information
+- **Retrieves memories** when relevant to the conversation
+- **Builds a knowledge graph** of entities and their relationships
+- **Maintains context** across multiple conversations
 
 ## For Vercel AI SDK Agents
 
@@ -227,12 +227,6 @@ Souvenir implements techniques from:
 
 > **"Optimizing the Interface Between Knowledge Graphs and LLMs for Complex Reasoning"**
 > [arXiv:2505.24478](https://arxiv.org/abs/2505.24478)
-
-Key findings implemented:
-- ✅ Graph-completion retrieval (15-20% better than vector alone)
-- ✅ Summary nodes (40% faster retrieval)
-- ✅ Hybrid strategies (best overall performance)
-- ✅ Top-K optimization (K=5 is optimal)
 
 ## Philosophy
 
