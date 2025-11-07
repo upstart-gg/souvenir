@@ -1,10 +1,20 @@
 # Quick Start
 
-This guide will walk you through creating your first memory-enabled AI agent with Souvenir in under 5 minutes.
+Give your Vercel AI SDK agent long-term memory in under 5 minutes.
 
-## Create a Souvenir Instance
+## Overview
 
-First, initialize Souvenir with your database connection:
+Souvenir provides **automatic memory tools** for AI agents. Your agent will:
+- ✅ Automatically store important information
+- ✅ Retrieve relevant memories when needed
+- ✅ Build a knowledge graph of entities and relationships
+- ✅ Remember across conversations
+
+You just create the tools and add them to your agent. That's it.
+
+## Setup
+
+### 1. Create Souvenir Instance
 
 ```typescript
 import { Souvenir } from '@upstart-gg/souvenir';
@@ -15,10 +25,6 @@ const souvenir = new Souvenir(
   {
     databaseUrl: process.env.DATABASE_URL!,
     embeddingDimensions: 1536,
-    chunkSize: 1000,
-    chunkOverlap: 200,
-    // Note: Uses 'token' chunking mode by default - perfect for most agents
-    // See the Chunking guide to learn about 'recursive' mode for documents
   },
   {
     embeddingProvider: {
@@ -35,167 +41,28 @@ const souvenir = new Souvenir(
 );
 ```
 
-::: tip Chunking Strategy
-Souvenir uses **token chunking** by default, which is ideal for conversational memory. If you're building a documentation assistant or processing structured content, consider using **recursive chunking** instead. [Learn more about chunking strategies →](/guide/chunking)
-:::
-
-## Step 1: Add Memory (Extract)
-
-Add content to memory. Souvenir will automatically chunk it:
+### 2. Create Memory Tools
 
 ```typescript
-const sessionId = 'user-123';
+import { createSouvenirTools } from '@upstart-gg/souvenir/tools';
 
-const chunkIds = await souvenir.add(
-  'The Eiffel Tower is a wrought-iron lattice tower in Paris, France. ' +
-  'It was designed by Gustave Eiffel and completed in 1889.',
-  {
-    sessionId,
-    sourceIdentifier: 'eiffel-tower-info',
-    metadata: { topic: 'landmarks', location: 'Paris' },
-  }
-);
-
-console.log(`Added ${chunkIds.length} chunks`);
+const tools = createSouvenirTools(souvenir);
 ```
 
-## Step 2: Process Memory (Transform)
+That's it! You now have 3 tools:
+- `storeMemory` - Store important information
+- `searchMemory` - Search past memories
+- `searchGraph` - Traverse the knowledge graph
 
-Extract entities and relationships from the chunks:
-
-```typescript
-await souvenir.processAll({
-  sessionId,
-  generateEmbeddings: true,
-  generateSummaries: true,
-});
-
-console.log('Memory processed and indexed!');
-```
-
-This will:
-- Extract entities (Eiffel Tower, Paris, France, Gustave Eiffel)
-- Create relationships (located_in, designed_by)
-- Generate embeddings for semantic search
-- Create summary nodes
-
-## Step 3: Search Memory (Load)
-
-Now you can search the memory using different strategies:
-
-### Vector Search
-
-```typescript
-const results = await souvenir.search('What landmarks are in Paris?', {
-  sessionId,
-  strategy: 'vector',
-  topK: 3,
-});
-
-for (const result of results) {
-  console.log(`Score: ${result.score}`);
-  console.log(`Content: ${result.node.content}`);
-}
-```
-
-### Graph Search
-
-```typescript
-const graphContext = await souvenir.searchGraph('Tell me about the Eiffel Tower', {
-  sessionId,
-  topK: 3,
-});
-
-console.log(graphContext.content); // Formatted for LLM
-```
-
-### Hybrid Search
-
-```typescript
-const hybridContext = await souvenir.searchHybrid('Who designed the Eiffel Tower?', {
-  sessionId,
-  topK: 3,
-});
-
-console.log(hybridContext.content); // Combines vector + graph
-```
-
-## Use with Vercel AI SDK
-
-Souvenir provides pre-built tools for the Vercel AI SDK:
+### 3. Use in Your Agent
 
 ```typescript
 import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
-import { createSouvenirTools } from '@upstart-gg/souvenir/tools';
-
-const tools = createSouvenirTools(souvenir);
 
 const result = await generateText({
-  model: openai('gpt-4o'),
+  model: openai('gpt-4'),
   tools,
-  toolChoice: 'auto',
-  sessionId: 'user-123',
-  messages: [
-    {
-      role: 'user',
-      content: 'Remember that I love pizza with mushrooms',
-    },
-  ],
-});
-
-console.log(result.text);
-```
-
-The agent will automatically:
-- Store the memory using `storeMemory` tool
-- Search memory when needed using `searchMemory` tool
-- Use graph traversal with `searchGraph` tool
-
-## Complete Example
-
-Here's a full working example:
-
-```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
-import { createSouvenirTools } from '@upstart-gg/souvenir/tools';
-import { openai } from '@ai-sdk/openai';
-import { generateText, embed } from 'ai';
-
-// Initialize Souvenir
-const souvenir = new Souvenir(
-  {
-    databaseUrl: process.env.DATABASE_URL!,
-    embeddingDimensions: 1536,
-    chunkSize: 1000,
-    chunkOverlap: 200,
-  },
-  {
-    embeddingProvider: {
-      generateEmbedding: async (text) => {
-        const { embedding } = await embed({
-          model: openai.embedding('text-embedding-3-small'),
-          value: text,
-        });
-        return embedding;
-      },
-    },
-    processorModel: openai('gpt-4o-mini'),
-  }
-);
-
-// Create tools
-const tools = createSouvenirTools(souvenir);
-
-// Use in conversation
-const sessionId = 'demo-session';
-
-// First message: Store memory
-await generateText({
-  model: openai('gpt-4o'),
-  tools,
-  toolChoice: 'auto',
-  sessionId,
+  maxSteps: 10,
   messages: [
     {
       role: 'user',
@@ -204,26 +71,269 @@ await generateText({
   ],
 });
 
-// Second message: Retrieve memory
-const result = await generateText({
-  model: openai('gpt-4o'),
-  tools,
-  toolChoice: 'auto',
-  sessionId,
-  messages: [
-    { role: 'user', content: 'What do you remember about me?' },
-  ],
-});
+console.log(result.text);
+// Agent automatically stores: "User's name is Alice, works as software engineer at Acme Corp"
+```
 
-console.log(result.text); // Will use memory to respond!
+## Complete Example
 
-// Clean up
+Here's a full working agent with memory:
+
+```typescript
+import { Souvenir } from '@upstart-gg/souvenir';
+import { createSouvenirTools } from '@upstart-gg/souvenir/tools';
+import { openai } from '@ai-sdk/openai';
+import { generateText, embed } from 'ai';
+
+// 1. Setup Souvenir
+const souvenir = new Souvenir(
+  {
+    databaseUrl: process.env.DATABASE_URL!,
+    embeddingDimensions: 1536,
+  },
+  {
+    embeddingProvider: {
+      generateEmbedding: async (text) => {
+        const { embedding } = await embed({
+          model: openai.embedding('text-embedding-3-small'),
+          value: text,
+        });
+        return embedding;
+      },
+    },
+    processorModel: openai('gpt-4o-mini'),
+  }
+);
+
+// 2. Create tools
+const tools = createSouvenirTools(souvenir);
+
+// 3. Use in agent
+async function chat(message: string, sessionId: string) {
+  const result = await generateText({
+    model: openai('gpt-4'),
+    tools,
+    maxSteps: 10,
+    sessionId, // Important: Pass sessionId to track user memories
+    messages: [
+      {
+        role: 'system',
+        content: 'You are a helpful assistant with long-term memory. Store important information about the user and recall it when relevant.',
+      },
+      {
+        role: 'user',
+        content: message,
+      },
+    ],
+  });
+
+  return result.text;
+}
+
+// First conversation
+const response1 = await chat(
+  "Hi! I'm Bob. I love Italian food and I'm allergic to shellfish.",
+  'user-bob'
+);
+console.log(response1);
+// Agent stores: name=Bob, loves Italian food, allergic to shellfish
+
+// Later conversation
+const response2 = await chat(
+  "Can you recommend a restaurant?",
+  'user-bob'
+);
+console.log(response2);
+// Agent searches memory, finds preferences, recommends Italian restaurant without shellfish
+
 await souvenir.close();
+```
+
+## How It Works
+
+### Behind the Scenes
+
+When your agent runs:
+
+1. **Agent receives user message**
+2. **Agent decides** whether to:
+   - Store new information → calls `storeMemory` tool
+   - Retrieve past information → calls `searchMemory` or `searchGraph` tool
+3. **Souvenir processes** the information:
+   - Chunks text
+   - Extracts entities and relationships
+   - Builds knowledge graph
+   - Generates embeddings
+4. **Agent uses** the retrieved information to respond
+
+### Knowledge Graph
+
+Based on research ([arXiv:2505.24478](https://arxiv.org/abs/2505.24478)), Souvenir builds a knowledge graph:
+
+```
+User Message: "I'm Alice and I work at Acme Corp"
+
+Extracts:
+- Entity: Alice (person)
+- Entity: Acme Corp (organization)
+- Relationship: Alice → works_at → Acme Corp
+
+Stores in graph for future retrieval
+```
+
+### Retrieval Strategies
+
+The agent can use different retrieval strategies:
+
+- **Vector search** - Find similar memories
+- **Graph traversal** - Find connected information
+- **Hybrid** - Combine both approaches
+
+The tools automatically choose the best strategy based on the query.
+
+## Multi-User Support
+
+Use `sessionId` to separate user memories:
+
+```typescript
+// User 1
+await chat("I love pizza", 'user-alice');
+
+// User 2
+await chat("I love sushi", 'user-bob');
+
+// Each user has separate memories
+```
+
+## What Gets Stored?
+
+The agent automatically stores:
+- ✅ User preferences ("I like dark mode")
+- ✅ Facts about the user ("My birthday is June 5")
+- ✅ Important context ("I'm working on Project X")
+- ✅ Decisions and agreements ("Let's meet next Tuesday")
+- ✅ Relationships ("Alice works with Bob")
+
+The agent does NOT store:
+- ❌ Trivial information ("Hello", "Thanks")
+- ❌ Questions without answers
+- ❌ Temporary context
+
+## Configuration
+
+### Minimal Configuration
+
+```typescript
+const souvenir = new Souvenir({
+  databaseUrl: process.env.DATABASE_URL!,
+  embeddingDimensions: 1536, // Must match your embedding model
+});
+```
+
+### With Options
+
+```typescript
+const souvenir = new Souvenir(
+  {
+    databaseUrl: process.env.DATABASE_URL!,
+    embeddingDimensions: 1536,
+
+    // Optional: Adjust chunking (defaults are good for most cases)
+    chunkSize: 1000,
+    chunkOverlap: 200,
+
+    // Optional: Filter search results
+    minRelevanceScore: 0.7,
+  },
+  {
+    // Required: Embedding provider
+    embeddingProvider: {
+      generateEmbedding: async (text) => { /* ... */ },
+    },
+
+    // Required: LLM for entity/relationship extraction
+    processorModel: openai('gpt-4o-mini'),
+
+    // Optional: Customize extraction prompts
+    promptTemplates: {
+      entityExtraction: 'Extract entities...',
+      relationshipExtraction: 'Extract relationships...',
+    },
+  }
+);
+```
+
+## Production Tips
+
+### 1. Use Session IDs
+Always pass `sessionId` to separate user memories:
+```typescript
+await generateText({
+  model: openai('gpt-4'),
+  tools,
+  sessionId: userId, // Important!
+  messages: [...],
+});
+```
+
+### 2. System Prompt
+Guide the agent on when to use memory:
+```typescript
+const systemPrompt = `You are a helpful assistant with long-term memory.
+
+IMPORTANT:
+- Store important user information (preferences, facts, goals)
+- Retrieve memories when relevant to the conversation
+- Don't store trivial information like greetings`;
+```
+
+### 3. Max Steps
+Allow enough steps for tool usage:
+```typescript
+await generateText({
+  model: openai('gpt-4'),
+  tools,
+  maxSteps: 10, // Allow multiple tool calls
+  messages: [...],
+});
+```
+
+### 4. Error Handling
+```typescript
+try {
+  const result = await generateText({
+    model: openai('gpt-4'),
+    tools,
+    messages: [...],
+  });
+  return result.text;
+} catch (error) {
+  console.error('Agent error:', error);
+  // Fallback behavior
+}
 ```
 
 ## Next Steps
 
-- [ETL Pipeline](/guide/etl-pipeline) - Learn about Extract-Transform-Load workflow
-- [Retrieval Strategies](/guide/retrieval-strategies) - Explore different search methods
-- [Configuration](/configuration/) - Customize Souvenir for your needs
-- [API Reference](/api/souvenir) - Full API documentation
+- [See the Tools in Action](/examples/vercel-ai-sdk) - Complete example with streaming
+- [Knowledge Graph Explanation](/guide/knowledge-graphs) - How the graph works
+- [Configuration Options](/configuration/) - All configuration options
+
+---
+
+## Troubleshooting
+
+### Agent doesn't use memory tools
+- ✅ Check `maxSteps` is high enough (minimum 5)
+- ✅ Add guidance in system prompt
+- ✅ Verify `sessionId` is passed
+
+### Memories aren't retrieved
+- ✅ Check embedding dimensions match your model
+- ✅ Lower `minRelevanceScore` if too strict
+- ✅ Verify database migrations ran correctly
+
+### Performance is slow
+- ✅ Entity/relationship extraction is async (runs in background)
+- ✅ Retrieval is fast (uses vector index)
+- ✅ Consider using `gpt-4o-mini` for processing
