@@ -122,7 +122,7 @@ This checks:
 brew install dbmate
 
 # Set up test database
-export DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:54322/souvenir_test
+export DATABASE_URL=postgresql://postgres:postgres@localhost:54322/souvenir_test
 dbmate -d db/migrations up
 
 # Run tests

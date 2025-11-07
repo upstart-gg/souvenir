@@ -60,7 +60,7 @@ describe("Souvenir Integration Tests", () => {
     souvenir = new Souvenir(
       {
         databaseUrl:
-          process.env.DATABASE_URL_TEST ||
+          process.env.DATABASE_URL ||
           "postgresql://postgres:postgres@localhost:54322/souvenir_test",
         embeddingDimensions: 1536,
         chunkSize: 512,

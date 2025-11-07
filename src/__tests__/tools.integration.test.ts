@@ -34,6 +34,7 @@ interface SearchMemoryTool {
 }
 
 // Mock embedding provider for deterministic testing
+// Generates embeddings based on word tokens for semantic similarity
 class TestEmbeddingProvider {
   dimensions = 1536;
   private cache = new Map<string, number[]>();
@@ -45,7 +46,7 @@ class TestEmbeddingProvider {
         return cached;
       }
     }
-    const embedding = this.generateDeterministicEmbedding(text);
+    const embedding = this.generateSemanticEmbedding(text);
     this.cache.set(text, embedding);
     return embedding;
   }
@@ -54,15 +55,34 @@ class TestEmbeddingProvider {
     return Promise.all(texts.map((text) => this.embed(text)));
   }
 
-  private generateDeterministicEmbedding(text: string): number[] {
-    // Use text content to generate consistent embeddings
-    const hash = this.hashString(text);
-    const embedding: number[] = [];
+  private generateSemanticEmbedding(text: string): number[] {
+    // Tokenize text into words (lowercase, remove punctuation)
+    const words = text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, "")
+      .split(/\s+/)
+      .filter((w) => w.length > 2); // Filter short words
 
-    for (let i = 0; i < this.dimensions; i++) {
-      const seed = hash + i;
-      const x = Math.sin(seed) * 10000;
-      embedding[i] = x - Math.floor(x);
+    // Simple approach: map each unique word to a position in the embedding
+    // Use a stable hash that distributes words across dimensions
+    const embedding = new Array(this.dimensions).fill(0);
+    const wordSet = new Set(words);
+
+    for (const word of wordSet) {
+      const hash = this.hashString(word);
+      // Map to multiple dimensions to increase signal
+      for (let j = 0; j < 5; j++) {
+        const dim = Math.abs(hash + j * 1000) % this.dimensions;
+        embedding[dim] += 1.0;
+      }
+    }
+
+    // Normalize to unit vector
+    const norm = Math.sqrt(embedding.reduce((sum, val) => sum + val * val, 0));
+    if (norm > 0) {
+      for (let i = 0; i < this.dimensions; i++) {
+        embedding[i] = embedding[i] / norm;
+      }
     }
 
     return embedding;
@@ -92,6 +112,7 @@ function createTestSouvenir(databaseUrl: string): {
       chunkingMode: "recursive",
       chunkOverlap: 50,
       minCharactersPerChunk: 100,
+      minRelevanceScore: 0.01, // Very low threshold for mock embeddings
     },
     {
       sessionId: crypto.randomUUID(),
@@ -111,7 +132,7 @@ describe("Souvenir Tools Integration Tests", () => {
   describe("storeMemory tool", () => {
     it("should store content and return chunk IDs", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -137,7 +158,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should handle metadata correctly", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -176,7 +197,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should work without metadata", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -198,7 +219,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should handle multiple memories", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -226,7 +247,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should trigger background processing", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -261,7 +282,7 @@ describe("Souvenir Tools Integration Tests", () => {
   describe("searchMemory tool", () => {
     it("should search without graph exploration", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -294,7 +315,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should search with graph exploration", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -326,7 +347,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should return no results when nothing matches", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -349,7 +370,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should format context for LLM consumption", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -388,7 +409,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should include metadata in formatted output", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -423,7 +444,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should default explore to true", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -455,7 +476,7 @@ describe("Souvenir Tools Integration Tests", () => {
   describe("Tool Integration", () => {
     it("should store and retrieve the same content", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -491,7 +512,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should handle continuous memory building", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -530,7 +551,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should handle special characters and formatting", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -569,7 +590,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should handle multi-turn conversation", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -618,7 +639,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should handle very long content", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -642,7 +663,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should handle Unicode and emoji content", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -666,7 +687,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should maintain session isolation", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir: souvenir1, cleanup: cleanup1 } =
           createTestSouvenir(db);
         const { souvenir: souvenir2, cleanup: cleanup2 } =
@@ -704,7 +725,7 @@ describe("Souvenir Tools Integration Tests", () => {
   describe("Tool Schema", () => {
     it("should have storeMemory schema with required fields", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -722,7 +743,7 @@ describe("Souvenir Tools Integration Tests", () => {
 
     it("should have searchMemory schema with optional explore field", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {

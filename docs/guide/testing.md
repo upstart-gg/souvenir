@@ -45,8 +45,8 @@ bun run test:local
 
 **Option 2: With Existing Database**
 ```bash
-# Set DATABASE_URL_TEST environment variable pointing to your database
-export DATABASE_URL_TEST=postgresql://user:password@localhost:5432/souvenir_test
+# Set DATABASE_URL environment variable pointing to your database
+export DATABASE_URL=postgresql://user:password@localhost:5432/souvenir_test
 
 # Run tests
 bun run test:integration
@@ -113,13 +113,13 @@ describe("My Integration Test", () => {
 ### Local Testing with Docker
 ```bash
 # Default (uses docker container on host port 54322)
-DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:54322/souvenir_test
+DATABASE_URL=postgresql://postgres:postgres@localhost:54322/souvenir_test
 ```
 
 ### Local Testing with External Database
 ```bash
 # If running PostgreSQL outside docker-compose
-DATABASE_URL_TEST=postgresql://postgres:password@localhost:5432/souvenir_test
+DATABASE_URL=postgresql://postgres:password@localhost:5432/souvenir_test
 ```
 
 ### CI (GitHub Actions)
@@ -130,7 +130,7 @@ CI=true
 
 The setup utilities automatically:
 - Use `DATABASE_URL` if `CI=true` is set
-- Fall back to `DATABASE_URL_TEST` for local development
+- Fall back to `DATABASE_URL` for local development
 - Ensure dbmate uses the correct database URL
 
 ## Troubleshooting
@@ -150,10 +150,10 @@ docker-compose logs postgres
 ### Migrations Not Applied
 ```bash
 # Check migration status
-DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/souvenir_test dbmate status
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/souvenir_test dbmate status
 
 # Run migrations manually
-DATABASE_URL_TEST=postgresql://postgres:postgres@localhost:5432/souvenir_test dbmate up
+DATABASE_URL=postgresql://postgres:postgres@localhost:5432/souvenir_test dbmate up
 ```
 
 ### Port Already In Use

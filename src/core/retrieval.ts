@@ -60,11 +60,21 @@ export class RetrievalStrategies {
       nodeTypes,
     );
 
+    console.log(
+      `[DEBUG vectorRetrieval] Query: "${query}", Initial results: ${results.length}, MinScore: ${minScore}`,
+    );
+
     // Filter by session if provided
     if (sessionId) {
       const sessionNodes = await this.repository.getNodesInSession(sessionId);
       const sessionNodeIds = new Set(sessionNodes.map((n) => n.id));
+      console.log(
+        `[DEBUG vectorRetrieval] SessionId: ${sessionId.substring(0, 8)}, Session nodes: ${sessionNodes.length}`,
+      );
       results = results.filter((r) => sessionNodeIds.has(r.node.id));
+      console.log(
+        `[DEBUG vectorRetrieval] After session filter: ${results.length} results`,
+      );
     }
 
     // Limit results
@@ -245,7 +255,7 @@ export class RetrievalStrategies {
     const graphResults: GraphRetrievalResult[] = [];
 
     for (const result of summaryResults) {
-      const sourceIds = (result.node.metadata['sourceIds'] as string[]) || [];
+      const sourceIds = (result.node.metadata["sourceIds"] as string[]) || [];
 
       // Get neighborhood of source nodes
       const allNodes = new Map<string, MemoryNode>();

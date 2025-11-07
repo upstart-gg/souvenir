@@ -162,9 +162,16 @@ export class Souvenir {
         sourceIdentifier,
         chunkMetadata,
       );
+      console.log(
+        `[DEBUG add] Created chunk ${createdChunk.id.substring(0, 8)}, sessionId in metadata: ${chunkMetadata.sessionId?.toString().substring(0, 8)}`,
+      );
       chunkIds.push(createdChunk.id);
       i++;
     }
+
+    console.log(
+      `[DEBUG add] Created ${chunkIds.length} chunks for sessionId ${this.sessionId.substring(0, 8)}`,
+    );
 
     return chunkIds;
   }
@@ -178,6 +185,10 @@ export class Souvenir {
     const { generateEmbeddings = true, generateSummaries = false } = options;
 
     const chunks = await this.repository.getUnprocessedChunks(this.sessionId);
+
+    console.log(
+      `[DEBUG processAll] SessionId: ${this.sessionId.substring(0, 8)}, Unprocessed chunks: ${chunks.length}, GenerateEmbeddings: ${generateEmbeddings}`,
+    );
 
     if (chunks.length === 0) {
       return;
@@ -231,6 +242,13 @@ export class Souvenir {
     let embedding: number[] | null = null;
     if (generateEmbeddings && this.embedding) {
       embedding = await this.embedding.embed(chunk.content);
+      console.log(
+        `[DEBUG processChunk] Generated embedding for chunk ${chunk.id.substring(0, 8)}, dimensions: ${embedding.length}, first value: ${embedding[0]?.toFixed(4)}`,
+      );
+    } else {
+      console.log(
+        `[DEBUG processChunk] Skipping embedding generation. generateEmbeddings: ${generateEmbeddings}, has embeddingProvider: ${!!this.embedding}`,
+      );
     }
 
     // Create memory node for the chunk itself
@@ -432,8 +450,17 @@ export class Souvenir {
   ): Promise<SearchResult[]> {
     const strategy = options.strategy || "vector";
 
-    // Add sessionId to options
-    const searchOptions = { ...options, sessionId: this.sessionId };
+    // Add sessionId and minScore from config if not provided
+    const searchOptions = {
+      ...options,
+      sessionId: this.sessionId,
+      minScore:
+        options.minScore ?? (this.config["minRelevanceScore"] as number),
+    };
+
+    console.log(
+      `[DEBUG search] Query: "${query}", Strategy: ${strategy}, SessionId: ${this.sessionId.substring(0, 8)}, MinScore: ${searchOptions.minScore}`,
+    );
 
     // Use appropriate retrieval strategy
     switch (strategy) {

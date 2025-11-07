@@ -16,20 +16,14 @@ let testDb: ReturnType<typeof postgres> | null = null;
 
 /**
  * Get database URL for current environment
- * CI: Uses DATABASE_URL from environment (GitHub Actions provides postgres service)
- * Local: Uses DATABASE_URL_TEST or falls back to docker container on localhost:54322
+ * Uses DATABASE_URL environment variable
+ * Local: docker-compose on localhost:54322
+ * CI: GitHub Actions postgres service
  */
 function getTestDatabaseUrl(): string {
-  // Prioritize CI environment variable
-  if (process.env.CI && process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL;
-  }
-
-  // Local development: use test-specific database URL
-  // Defaults to docker-compose postgres service on localhost:54322
-  const testUrl = process.env.DATABASE_URL_TEST;
-  if (testUrl) {
-    return testUrl;
+  const dbUrl = process.env.DATABASE_URL;
+  if (dbUrl) {
+    return dbUrl;
   }
 
   // Fallback for docker-compose setup (runs on host, connects to localhost:54322)
@@ -91,6 +85,8 @@ export async function getTestDatabase(): Promise<ReturnType<typeof postgres>> {
   const databaseUrl = getTestDatabaseUrl();
   testDb = postgres(databaseUrl, {
     ssl: false,
+    idle_timeout: 5,
+    connect_timeout: 5,
   });
   return testDb;
 }
@@ -104,13 +100,8 @@ export async function initializeTestDatabase(): Promise<void> {
   try {
     const databaseUrl = getTestDatabaseUrl();
 
-    // Append sslmode=disable for local docker connections
-    const dbmateUrl = databaseUrl.includes("localhost")
-      ? `${databaseUrl}?sslmode=disable`
-      : databaseUrl;
-
     // Set DATABASE_URL for dbmate command
-    const env = { ...process.env, DATABASE_URL: dbmateUrl };
+    const env = { ...process.env, DATABASE_URL: databaseUrl };
 
     // Run dbmate up to apply all migrations
     console.log("Initializing test database with dbmate migrations...");
@@ -149,21 +140,33 @@ export async function resetTestDatabase(): Promise<void> {
   try {
     const databaseUrl = getTestDatabaseUrl();
 
-    // Append sslmode=disable for local docker connections
-    const dbmateUrl = databaseUrl.includes("localhost")
-      ? `${databaseUrl}?sslmode=disable`
-      : databaseUrl;
-
-    const env = { ...process.env, DATABASE_URL: dbmateUrl };
+    const env = { ...process.env, DATABASE_URL: databaseUrl };
 
     console.log("Resetting test database...");
+
+    // Close existing connection to avoid stale connection issues
+    if (testDb) {
+      try {
+        await testDb.end();
+      } catch (error) {
+        console.error("Error closing stale connection:", error);
+      }
+      testDb = null;
+    }
 
     // Drop schema (cascade all tables)
     const db = await getTestDatabase();
     try {
+      // Suppress NOTICEs for this operation
+      await db`SET client_min_messages TO WARNING`;
       await db`DROP SCHEMA public CASCADE`;
       await db`CREATE SCHEMA public`;
+      await db`SET client_min_messages TO DEFAULT`;
       console.log("✓ Dropped and recreated public schema");
+
+      // Close connection after schema reset to ensure fresh connection for migrations
+      await db.end();
+      testDb = null;
     } catch (error) {
       console.error(
         "Note: Could not drop schema, continuing with dbmate...",
@@ -192,12 +195,7 @@ export async function cleanupTestDatabase(): Promise<void> {
   try {
     const databaseUrl = getTestDatabaseUrl();
 
-    // Append sslmode=disable for local docker connections
-    const dbmateUrl = databaseUrl.includes("localhost")
-      ? `${databaseUrl}?sslmode=disable`
-      : databaseUrl;
-
-    const env = { ...process.env, DATABASE_URL: dbmateUrl };
+    const env = { ...process.env, DATABASE_URL: databaseUrl };
 
     console.log("Cleaning up test database...");
     await execAsync("dbmate down", {

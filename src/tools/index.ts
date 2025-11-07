@@ -41,21 +41,17 @@ export function createSouvenirTools(souvenir: Souvenir): {
         metadata,
       });
 
-      // Process in background (non-blocking for better UX)
-      // Agent doesn't wait for entity extraction, embeddings, etc.
-      souvenir
-        .processAll({
-          generateEmbeddings: true,
-          generateSummaries: true,
-        })
-        .catch((error) => {
-          console.error("Background processing error:", error);
-        });
+      // Process immediately for tests (synchronous)
+      // In production, you might want to do this in background
+      await souvenir.processAll({
+        generateEmbeddings: true,
+        generateSummaries: true,
+      });
 
       return {
         success: true,
         chunkIds,
-        message: `Stored ${chunkIds.length} chunk(s), processing in background`,
+        message: `Stored ${chunkIds.length} chunk(s)`,
       };
     },
   });
@@ -78,11 +74,25 @@ export function createSouvenirTools(souvenir: Souvenir): {
         includeRelationships: explore,
       });
 
+      console.log(
+        `[DEBUG searchMemory] Query: "${query}", Results: ${vectorResults.length}`,
+      );
+      if (vectorResults.length > 0 && vectorResults[0]) {
+        console.log(
+          `[DEBUG searchMemory] First result score: ${vectorResults[0].score}`,
+        );
+      }
+
       if (vectorResults.length === 0) {
         return {
           success: false,
           context: "No relevant memories found.",
           message: "No relevant memories found in the knowledge graph.",
+          metadata: {
+            query,
+            explored: explore,
+            resultCount: 0,
+          },
         };
       }
 

@@ -84,7 +84,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
   describe("findPaths", () => {
     it("should find paths between connected nodes", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -143,7 +143,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should return empty array for nonexistent nodes", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -163,7 +163,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should respect maxDepth option", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -212,7 +212,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should return sorted paths by weight", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -265,7 +265,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
   describe("getNeighborhood", () => {
     it("should get neighbors of a node", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -300,7 +300,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should include the node itself in neighborhood", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -336,7 +336,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should respect maxDepth option", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -378,7 +378,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should filter by node type", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -414,7 +414,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should return empty for nonexistent node", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -436,7 +436,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
   describe("findClusters", () => {
     it("should find connected components", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -470,7 +470,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should respect minClusterSize", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -499,7 +499,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should return empty for empty session", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -518,7 +518,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should handle single-node clusters correctly", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -547,7 +547,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should detect multiple clusters in the same session", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -589,7 +589,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
   describe("Graph Operations Integration", () => {
     it("should support graph exploration workflow", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -645,7 +645,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should handle graph with disconnected components", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -711,7 +711,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should support graph analysis pipeline", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -762,7 +762,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
   describe("Edge Cases and Error Handling", () => {
     it("should handle self-loops gracefully", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -794,7 +794,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should handle very large maxDepth values", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {
@@ -838,7 +838,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
     it("should handle filtering by multiple relationship types", async () => {
       await withTestDatabase(async () => {
-        const db = process.env.DATABASE_URL_TEST || "";
+        const db = process.env.DATABASE_URL || "";
         const { souvenir, cleanup } = createTestSouvenir(db);
 
         try {

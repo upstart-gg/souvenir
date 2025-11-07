@@ -23,17 +23,26 @@ export class MemoryRepository {
   ): Promise<MemoryNode> {
     const embeddingArray = embedding ? `[${embedding.join(",")}]` : null;
 
+    console.log(
+      `[DEBUG createNode] Creating node type: ${nodeType}, has embedding: ${!!embedding}, content preview: "${content.substring(0, 50)}..."`,
+    );
+
     const query = this.db.query;
     const rows = await query`
       INSERT INTO memory_nodes (content, embedding, node_type, metadata)
-      VALUES (${content}, ${embeddingArray}, ${nodeType}, ${JSON.stringify(metadata)})
+      VALUES (${content}, ${embeddingArray}, ${nodeType}, ${query.json(metadata as Parameters<typeof query.json>[0])})
       RETURNING *
     `;
 
     const row = rows[0];
     if (!row) throw new Error("Failed to create node");
 
-    return this.mapNode(row as Record<string, unknown>);
+    const createdNode = this.mapNode(row as Record<string, unknown>);
+    console.log(
+      `[DEBUG createNode] Created node ${createdNode.id.substring(0, 8)}, embedding in DB: ${!!createdNode.embedding}`,
+    );
+
+    return createdNode;
   }
 
   async getNode(id: string): Promise<MemoryNode | null> {
@@ -111,6 +120,14 @@ export class MemoryRepository {
   ): Promise<SearchResult[]> {
     const embeddingArray = `[${embedding.join(",")}]`;
 
+    // Debug: check total nodes with embeddings
+    const countRows = await this.db
+      .query`SELECT COUNT(*) as count FROM memory_nodes WHERE embedding IS NOT NULL`;
+    const totalWithEmbeddings = countRows[0] ? Number(countRows[0].count) : 0;
+    console.log(
+      `[DEBUG searchByVector] Total nodes with embeddings: ${totalWithEmbeddings}, MinScore: ${minScore}`,
+    );
+
     let rows: Record<string, unknown>[];
     if (nodeTypes && nodeTypes.length > 0) {
       rows = await this.db.query`
@@ -152,7 +169,7 @@ export class MemoryRepository {
   ): Promise<MemoryRelationship> {
     const rows = await this.db.query`
       INSERT INTO memory_relationships (source_id, target_id, relationship_type, weight, metadata)
-      VALUES (${sourceId}, ${targetId}, ${relationshipType}, ${weight}, ${JSON.stringify(metadata)})
+      VALUES (${sourceId}, ${targetId}, ${relationshipType}, ${weight}, ${this.db.query.json(metadata as Parameters<typeof this.db.query.json>[0])})
       RETURNING *
     `;
 
@@ -197,7 +214,7 @@ export class MemoryRepository {
   ): Promise<MemorySession> {
     const rows = await this.db.query`
       INSERT INTO memory_sessions (session_name, metadata)
-      VALUES (${sessionName || null}, ${JSON.stringify(metadata)})
+      VALUES (${sessionName || null}, ${this.db.query.json(metadata as Parameters<typeof this.db.query.json>[0])})
       RETURNING *
     `;
 
@@ -261,8 +278,9 @@ export class MemoryRepository {
       `;
 
       return rows.map((row: Record<string, unknown>) => this.mapNode(row));
-    } catch {
-      // Handle invalid UUID format gracefully - return empty array
+    } catch (error) {
+      // Log error for debugging but return empty array
+      console.error("Error getting nodes in session:", error);
       return [];
     }
   }
@@ -275,9 +293,12 @@ export class MemoryRepository {
     sourceIdentifier?: string,
     metadata: Record<string, unknown> = {},
   ): Promise<MemoryChunk> {
+    const metadataJson = this.db.query.json(
+      metadata as Parameters<typeof this.db.query.json>[0],
+    );
     const rows = await this.db.query`
       INSERT INTO memory_chunks (content, chunk_index, source_identifier, metadata)
-      VALUES (${content}, ${chunkIndex}, ${sourceIdentifier || null}, ${JSON.stringify(metadata)})
+      VALUES (${content}, ${chunkIndex}, ${sourceIdentifier || null}, ${metadataJson})
       RETURNING *
     `;
 
@@ -294,6 +315,23 @@ export class MemoryRepository {
 
     if (sessionId) {
       // Filter by sessionId stored in chunk metadata
+      console.log(
+        `[DEBUG getUnprocessedChunks] Looking for sessionId: ${sessionId.substring(0, 8)}`,
+      );
+
+      // First, check ALL unprocessed chunks to see what's in the database
+      const allRows = await this.db
+        .query`SELECT * FROM memory_chunks WHERE processed = FALSE`;
+      console.log(
+        `[DEBUG getUnprocessedChunks] Total unprocessed chunks in DB: ${allRows.length}`,
+      );
+      if (allRows.length > 0 && allRows[0]) {
+        const metadata = allRows[0].metadata as Record<string, unknown>;
+        console.log(
+          `[DEBUG getUnprocessedChunks] First chunk metadata: ${JSON.stringify(metadata)}`,
+        );
+      }
+
       rows = await this.db.query`
         SELECT * FROM memory_chunks
         WHERE processed = FALSE
@@ -301,6 +339,15 @@ export class MemoryRepository {
         ORDER BY created_at ASC
         LIMIT ${limit}
       `;
+      console.log(
+        `[DEBUG getUnprocessedChunks] Found ${rows.length} unprocessed chunks matching sessionId`,
+      );
+      if (rows.length > 0 && rows[0]) {
+        const metadata = rows[0].metadata as Record<string, unknown>;
+        console.log(
+          `[DEBUG getUnprocessedChunks] First chunk metadata sessionId: ${metadata?.sessionId}`,
+        );
+      }
     } else {
       // Get all unprocessed chunks
       rows = await this.db.query`
