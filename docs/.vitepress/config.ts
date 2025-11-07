@@ -51,49 +51,24 @@ export default defineConfig({
           ],
         },
         {
-          text: 'Core Concepts',
+          text: 'How It Works',
           items: [
-            { text: 'ETL Pipeline', link: '/guide/etl-pipeline' },
             { text: 'Knowledge Graphs', link: '/guide/knowledge-graphs' },
-            { text: 'Vector Search', link: '/guide/vector-search' },
             { text: 'Retrieval Strategies', link: '/guide/retrieval-strategies' },
-          ],
-        },
-        {
-          text: 'Advanced',
-          items: [
-            { text: 'Chunking Configuration', link: '/guide/chunking' },
-            { text: 'Custom Embeddings', link: '/guide/custom-embeddings' },
-            { text: 'Prompt Templates', link: '/guide/prompt-templates' },
           ],
         },
       ],
       '/api/': [
         {
-          text: 'Core API',
+          text: 'Tools (Main API)',
           items: [
-            { text: 'Overview', link: '/api/' },
-            { text: 'Souvenir', link: '/api/souvenir' },
-            { text: 'Memory Repository', link: '/api/repository' },
-            { text: 'Graph Operations', link: '/api/graph' },
+            { text: 'Memory Tools', link: '/api/tools' },
           ],
         },
         {
-          text: 'Tools',
+          text: 'Configuration',
           items: [
-            { text: 'Vercel AI SDK Tools', link: '/api/tools' },
-          ],
-        },
-        {
-          text: 'Utilities',
-          items: [
-            { text: 'Chunking', link: '/api/chunking' },
-            { text: 'Formatting', link: '/api/formatting' },
-          ],
-        },
-        {
-          text: 'Types',
-          items: [
+            { text: 'Souvenir Options', link: '/api/souvenir' },
             { text: 'Type Reference', link: '/api/types' },
           ],
         },
@@ -103,10 +78,9 @@ export default defineConfig({
           text: 'Examples',
           items: [
             { text: 'Overview', link: '/examples/' },
-            { text: 'Basic Usage', link: '/examples/basic' },
             { text: 'With Vercel AI SDK', link: '/examples/vercel-ai-sdk' },
-            { text: 'Retrieval Strategies', link: '/examples/retrieval-strategies' },
-            { text: 'Custom Chunking', link: '/examples/custom-chunking' },
+            { text: 'Streaming Responses', link: '/examples/streaming' },
+            { text: 'Multi-User Chat', link: '/examples/multi-user' },
           ],
         },
       ],
@@ -117,7 +91,6 @@ export default defineConfig({
             { text: 'Overview', link: '/configuration/' },
             { text: 'Database Setup', link: '/configuration/database' },
             { text: 'Embedding Providers', link: '/configuration/embeddings' },
-            { text: 'Chunking Options', link: '/configuration/chunking' },
           ],
         },
       ],

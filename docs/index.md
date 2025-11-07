@@ -3,49 +3,49 @@ layout: home
 
 hero:
   name: "Souvenir"
-  text: "Memory for AI agents"
+  text: "Long-term memory for AI agents"
   image:
     src: /souvenir-hero.svg
     alt: Souvenir
-  tagline: ETL-based memory management with knowledge graphs and vector search
+  tagline: Add automatic memory tools to your Vercel AI SDK agents. Build knowledge graphs that remember.
   actions:
     - theme: brand
       text: Get Started
-      link: /guide/
+      link: /guide/quick-start
     - theme: alt
       text: View on GitHub
       link: https://github.com/upstart-gg/souvenir
 
 features:
+  - icon: 🤖
+    title: Automatic Memory Tools
+    details: Just add tools to your agent. It automatically stores important info and retrieves relevant memories when needed.
+
   - icon: 🧠
-    title: Knowledge Graphs
-    details: Store and traverse relationships between entities with weighted connections for context-aware retrieval
+    title: Knowledge Graphs from Research
+    details: Built on academic research (arXiv:2505.24478). Captures entities and relationships, not just text similarity.
 
   - icon: 🔍
-    title: Multiple Retrieval Strategies
-    details: Vector search, graph-neighborhood, graph-completion, graph-summary, and hybrid retrieval modes
+    title: Smart Retrieval Strategies
+    details: Vector search, graph traversal, or hybrid - the agent picks the best strategy for each query.
 
   - icon: ⚡
-    title: Advanced Chunking
-    details: Token-based and recursive chunking with support for custom tokenizers and hierarchical splitting rules
+    title: Simple Setup
+    details: Create instance → Get tools → Add to agent. That's it. The agent handles everything else automatically.
 
-  - icon: 🛠️
-    title: Vercel AI SDK Tools
-    details: Pre-built tools for storing and searching memory that work seamlessly with Vercel AI SDK
+  - icon: 👥
+    title: Multi-User Sessions
+    details: Each user gets their own memory space. Memories don't leak between users.
 
   - icon: 🗄️
     title: PostgreSQL + pgvector
-    details: Leverage PostgreSQL's reliability with pgvector for efficient similarity search
-
-  - icon: 🌐
-    title: Multi-Runtime Support
-    details: Works with Node.js 20+, Bun, Deno, and Cloudflare Workers
+    details: Production-ready storage with fast vector similarity search and graph traversal.
 
   - icon: 📊
-    title: Research-Based
-    details: Built on findings from "Optimizing the Interface Between Knowledge Graphs and LLMs" (arXiv:2505.24478)
+    title: Research-Proven Results
+    details: Knowledge graphs improve multi-hop reasoning by 30%, complex queries by 25% vs. vector-only systems.
 
-  - icon: 🔒
-    title: Type-Safe
-    details: Full TypeScript support with comprehensive types for all operations
+  - icon: 🛠️
+    title: Built for Vercel AI SDK
+    details: Designed specifically for Vercel AI SDK agents with TypeScript support and proper tool schemas.
 ---

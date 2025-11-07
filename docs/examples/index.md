@@ -1,51 +1,125 @@
 # Examples
 
-Learn by example with these comprehensive guides.
+Learn how to add memory to your Vercel AI SDK agents with these practical examples.
 
-## Getting Started
-
-### [Basic Usage](/examples/basic)
-
-Learn the fundamentals of Souvenir:
-- Initialize Souvenir
-- Add and process memory
-- Search with different strategies
+## Core Examples
 
 ### [With Vercel AI SDK](/examples/vercel-ai-sdk)
 
-Build AI agents with automatic memory:
-- Use pre-built tools
-- Handle tool calls
-- Stream responses
+The essential example showing how to add memory tools to your agent:
 
-## Advanced Examples
+```typescript
+const tools = createSouvenirTools(souvenir);
 
-### [Retrieval Strategies](/examples/retrieval-strategies)
+await generateText({
+  model: openai('gpt-4'),
+  tools,
+  messages: [...]
+});
+```
 
-Compare different retrieval methods:
-- Vector search
-- Graph-based retrieval
-- Hybrid approaches
+**You'll learn:**
+- How to create and use memory tools
+- How the agent automatically stores and retrieves memories
+- How to handle multi-turn conversations
 
-### [Custom Chunking](/examples/custom-chunking)
+[View full example →](/examples/vercel-ai-sdk)
 
-Optimize chunking for your content:
-- Token-based chunking
-- Recursive chunking
-- Custom rules and tokenizers
+---
+
+### [Streaming Responses](/examples/streaming)
+
+Build agents with streaming responses and memory:
+
+```typescript
+const result = streamText({
+  model: openai('gpt-4'),
+  tools,
+  messages: [...]
+});
+
+for await (const chunk of result.textStream) {
+  process.stdout.write(chunk);
+}
+```
+
+**You'll learn:**
+- How to use memory tools with streaming
+- How to show real-time responses
+- How tool calls work with streaming
+
+[View full example →](/examples/streaming)
+
+---
+
+### [Multi-User Chat](/examples/multi-user)
+
+Handle multiple users with separate memory spaces:
+
+```typescript
+// User 1
+await generateText({
+  model: openai('gpt-4'),
+  tools,
+  sessionId: 'user-alice',
+  messages: [...]
+});
+
+// User 2 (separate memories)
+await generateText({
+  model: openai('gpt-4'),
+  tools,
+  sessionId: 'user-bob',
+  messages: [...]
+});
+```
+
+**You'll learn:**
+- How to use `sessionId` for multi-user support
+- How to keep user memories separate
+- How to manage concurrent conversations
+
+[View full example →](/examples/multi-user)
+
+---
 
 ## More Examples
 
-Check out the [examples directory](https://github.com/upstart-gg/souvenir/tree/main/examples) in the GitHub repository for:
+Check out the [examples directory](https://github.com/upstart-gg/souvenir/tree/main/examples) on GitHub for additional examples:
 
-- **chatbot** - Multi-turn conversation with memory
-- **documentation-assistant** - Search and answer questions about docs
-- **research-assistant** - Complex reasoning with knowledge graphs
-- **custom-embeddings** - Use different embedding models
-- **multi-session** - Manage multiple user sessions
+- **chatbot** - Complete chatbot with memory
+- **customer-support** - Support agent that remembers users
+- **personal-assistant** - Assistant that tracks tasks and preferences
+- **multi-session** - Advanced session management
+
+---
+
+## Example Structure
+
+All examples follow this pattern:
+
+```typescript
+// 1. Setup Souvenir
+const souvenir = new Souvenir(config, options);
+
+// 2. Get tools
+const tools = createSouvenirTools(souvenir);
+
+// 3. Use in agent
+const result = await generateText({
+  model: openai('gpt-4'),
+  tools,
+  sessionId: 'user-id',
+  messages: [...]
+});
+
+// 4. The agent automatically uses memory tools when needed
+```
+
+---
 
 ## Next Steps
 
-- [API Reference](/api/) - Explore the full API
-- [Guide](/guide/) - In-depth concepts
-- [Configuration](/configuration/) - Customize Souvenir
+- [Quick Start](/guide/quick-start) - Get started in 5 minutes
+- [Memory Tools API](/api/tools) - Tool documentation
+- [Configuration](/configuration/) - Configure Souvenir

@@ -1,99 +1,74 @@
 # API Reference
 
-Complete API documentation for Souvenir.
+Souvenir provides a simple API focused on tools for Vercel AI SDK agents.
 
-## Core Classes
+## Memory Tools (Main API)
 
-### Souvenir
+The primary way to use Souvenir is through the memory tools:
 
-The main entry point for the Souvenir memory system.
+### [Memory Tools](/api/tools)
 
-```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
-
-const souvenir = new Souvenir(config, options);
-```
-
-- [Full Documentation](/api/souvenir)
-
-### MemoryRepository
-
-Low-level database operations for memory nodes and relationships.
-
-```typescript
-import { MemoryRepository } from '@upstart-gg/souvenir';
-
-const repository = new MemoryRepository(databaseClient);
-```
-
-- [Full Documentation](/api/repository)
-
-### GraphOperations
-
-Knowledge graph traversal and manipulation.
-
-```typescript
-import { GraphOperations } from '@upstart-gg/souvenir';
-
-const graph = new GraphOperations(repository);
-```
-
-- [Full Documentation](/api/graph)
-
-## Tools
-
-### Vercel AI SDK Tools
-
-Pre-built tools for use with the Vercel AI SDK.
+Pre-built tools for Vercel AI SDK agents that handle all memory operations automatically:
 
 ```typescript
 import { createSouvenirTools } from '@upstart-gg/souvenir/tools';
 
 const tools = createSouvenirTools(souvenir);
-```
 
-- [Full Documentation](/api/tools)
-
-## Utilities
-
-### Chunking
-
-Text chunking with advanced configuration.
-
-```typescript
-import { chunkText } from '@upstart-gg/souvenir';
-
-const chunks = await chunkText(text, {
-  mode: 'token',
-  chunkSize: 1000,
-  chunkOverlap: 200,
+// Use in your agent
+await generateText({
+  model: openai('gpt-4'),
+  tools, // Provides: storeMemory, searchMemory, searchGraph
+  messages: [...]
 });
 ```
 
-- [Full Documentation](/api/chunking)
+**Available tools:**
+- `storeMemory` - Store important information
+- `searchMemory` - Search past memories
+- `searchGraph` - Traverse the knowledge graph
 
-### Formatting
+[View full tool documentation →](/api/tools)
 
-Format retrieval results for LLM consumption.
+---
+
+## Configuration
+
+### [Souvenir Options](/api/souvenir)
+
+Configuration options for creating a Souvenir instance:
 
 ```typescript
-import {
-  formatSearchResultsForLLM,
-  formatGraphRetrievalForLLM,
-  formatGraphTripletsForLLM,
-} from '@upstart-gg/souvenir';
+const souvenir = new Souvenir(
+  {
+    databaseUrl: string,
+    embeddingDimensions: number,
+    chunkSize?: number,
+    chunkOverlap?: number,
+    // ... more options
+  },
+  {
+    embeddingProvider: EmbeddingProvider,
+    processorModel: LanguageModel,
+    promptTemplates?: PromptTemplates,
+  }
+);
 ```
 
-- [Full Documentation](/api/formatting)
+[View all configuration options →](/api/souvenir)
 
-## Types
+### [Type Reference](/api/types)
 
-Complete TypeScript type definitions.
+TypeScript type definitions for all operations.
 
-- [Type Reference](/api/types)
+[View type definitions →](/api/types)
+
+---
 
 ## Quick Links
 
-- [Souvenir Class](/api/souvenir) - Main API
-- [Tools](/api/tools) - Vercel AI SDK integration
-- [Types](/api/types) - TypeScript types
+- [Memory Tools](/api/tools) - The main API you'll use
+- [Souvenir Options](/api/souvenir) - Configuration reference
+- [Type Reference](/api/types) - TypeScript types
+- [Quick Start](/guide/quick-start) - Get started in 5 minutes
+- [Examples](/examples/) - See it in action
