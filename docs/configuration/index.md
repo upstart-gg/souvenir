@@ -5,7 +5,7 @@ Customize Souvenir for your needs.
 ## Basic Configuration
 
 ```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
+import { Souvenir } from '@upstart.gg/souvenir';
 
 const souvenir = new Souvenir({
   // Database connection
@@ -144,9 +144,9 @@ promptTemplates: {
 
 ## Detailed Guides
 
-- [Database Setup](/configuration/database) - PostgreSQL and pgvector
-- [Embedding Providers](/configuration/embeddings) - Configure embeddings
-- [Chunking Options](/configuration/chunking) - Advanced chunking
+- [Quick Start](/guide/quick-start) - Configuration reference
+- [Chunking Options](/guide/chunking) - Advanced chunking
+- [ETL Pipeline](/guide/etl-pipeline) - How Souvenir processes data
 
 ## Environment Variables
 
@@ -166,6 +166,8 @@ SOUVENIR_CHUNK_OVERLAP=200
 
 ## Next Steps
 
-- [Database Setup](/configuration/database) - Set up PostgreSQL
-- [Chunking Options](/configuration/chunking) - Optimize chunking
+- [Quick Start](/guide/quick-start) - Get started
+- [Retrieval Strategies](/guide/retrieval-strategies) - Search options
 - [Examples](/examples/) - See configuration in action
+
+````

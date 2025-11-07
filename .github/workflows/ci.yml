@@ -39,7 +39,7 @@ jobs:
 
       - name: Run database migrations
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/souvenir_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/souvenir_test
         run: |
           bun add -g dbmate
           dbmate -d db/migrations -s db/schema.sql up
@@ -50,14 +50,19 @@ jobs:
       - name: Run lint
         run: bun run lint
 
-      - name: Run tests
+      - name: Run unit tests
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/souvenir_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/souvenir_test
         run: bun test
+
+      - name: Run integration tests
+        env:
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/souvenir_test
+        run: bun run test:integration
 
       - name: Run tests with coverage
         env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/souvenir_test
+          DATABASE_URL_TEST: postgresql://postgres:postgres@localhost:5432/souvenir_test
         run: bun test:coverage
 
   build:

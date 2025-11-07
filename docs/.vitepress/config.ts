@@ -103,7 +103,7 @@ export default defineConfig({
       },
       {
         icon: 'npm',
-        link: 'https://www.npmjs.com/package/@upstart-gg/souvenir',
+        link: 'https://www.npmjs.com/package/@upstart.gg/souvenir',
       },
     ],
 

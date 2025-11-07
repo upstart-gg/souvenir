@@ -62,65 +62,99 @@ const souvenir = new Souvenir(
 );
 ```
 
-### 3. Store and retrieve memories
+### 3. Use with Vercel AI SDK
 
 ```typescript
-// Create a session to group related memories
-const session = await souvenir.createSession('conversation-1');
+import { generateText } from 'ai';
 
-// Add data to memory
-await souvenir.add('The user prefers dark mode in their IDE.', {
-  sessionId: session.id,
+// Initialize Souvenir with a session
+const souvenir = new Souvenir(
+  {
+    databaseUrl: process.env.DATABASE_URL!,
+  },
+  {
+    sessionId: 'conversation-1', // Group related memories
+    // Use any embedding model from Vercel AI SDK
+    embeddingProvider: new AIEmbeddingProvider(
+      openai.embedding('text-embedding-3-small')
+    ),
+    // Use any LLM for entity/relationship extraction
+    processorModel: openai('gpt-4o-mini'),
+  }
+);
+
+// Create tools for the agent
+const tools = createSouvenirTools(souvenir);
+
+// Agent autonomously uses memory
+const result = await generateText({
+  model: openai('gpt-4o'),
+  tools,
+  maxSteps: 10,
+  messages: [
+    {
+      role: 'user',
+      content: 'Remember: I love dark mode, TypeScript, and minimalist UI design.',
+    }
+  ],
 });
 
-// Process with summaries (paper-based optimization)
-await souvenir.processAll({
-  sessionId: session.id,
-  generateEmbeddings: true,
-  generateSummaries: true, // Generate summary nodes
-});
-
-// Search with graph retrieval strategy (paper-based)
-const results = await souvenir.search('What are the user preferences?', {
-  sessionId: session.id,
-  strategy: 'graph-completion', // Use graph-based retrieval
-});
-
-console.log(results[0].node.content); // "The user prefers dark mode..."
+console.log(result.text);
+// Agent automatically stores preferences and can retrieve them later
 ```
-
-**New! Retrieval Strategies** (from paper):
-- `vector` - Traditional semantic search
-- `graph-neighborhood` - Retrieve connected graph nodes
-- `graph-completion` - Format graph triplets for LLM reasoning
-- `graph-summary` - Use summary nodes for retrieval
-- `hybrid` - Combine multiple strategies
 
 ## Using with Vercel AI SDK Tools
 
-Souvenir provides pre-built tools that work seamlessly with the Vercel AI SDK:
+Souvenir provides **2 pre-built tools** that work seamlessly with the Vercel AI SDK. This is the primary way to use Souvenir - through AI agents autonomously calling memory tools:
+
+### Available Tools
+
+1. **`storeMemory`** - Store information in long-term memory
+   - Automatically chunks content
+   - Triggers background processing (entity extraction, embeddings, graph building)
+   - Non-blocking - returns immediately while processing happens
+
+2. **`searchMemory`** - Search memory with automatic graph exploration
+   - Searches using semantic similarity (vector search)
+   - Optionally explores the knowledge graph for related context
+   - Returns LLM-consumable formatted results
 
 ```typescript
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 import { createSouvenirTools } from '@upstart.gg/souvenir/tools';
+import { Souvenir, AIEmbeddingProvider } from '@upstart.gg/souvenir';
 
+// Initialize Souvenir
+const souvenir = new Souvenir(
+  { databaseUrl: process.env.DATABASE_URL! },
+  {
+    sessionId: 'user-123',
+    embeddingProvider: new AIEmbeddingProvider(
+      openai.embedding('text-embedding-3-small')
+    ),
+    processorModel: openai('gpt-4o-mini'),
+  }
+);
+
+// Create tools for the agent
 const tools = createSouvenirTools(souvenir);
 
+// Agent autonomously uses memory
 const result = await generateText({
   model: openai('gpt-4o'),
   tools,
   maxSteps: 10,
-  prompt: 'Remember that I love TypeScript and use it for all my projects.',
+  prompt: 'Remember that I love TypeScript and use it for all my projects. What do you know about my preferences?',
 });
 ```
 
 The AI agent can now autonomously:
-- Store information in memory with `storeMemory`
-- Search for relevant memories with `searchMemory`
-- Explore related memories with `getRelatedMemories`
-- Find connection paths with `findMemoryPaths`
-- Create new sessions with `createSession`
+- **Store** information with `storeMemory` tool (agent calls when learning something)
+- **Search** with automatic graph exploration via `searchMemory` tool (agent calls when needing context)
+- Build knowledge graphs automatically as it learns
+- Receive formatted context ready for LLM consumption
+
 
 ## Core Concepts
 
@@ -128,34 +162,28 @@ The AI agent can now autonomously:
 
 Souvenir uses an Extract-Transform-Load (ETL) pipeline inspired by data processing systems:
 
-1. **Extract** (`add()`) - Chunk and store raw data
-2. **Transform** (`processAll()`) - Extract entities, relationships, and generate embeddings
-3. **Load** - Store processed data in the knowledge graph
+1. **Extract** - `storeMemory` chunks and stores raw data
+2. **Transform** - Background processing extracts entities, relationships, and generates embeddings
+3. **Load** - Processed data stored in the knowledge graph
 
 ### Knowledge Graph
 
 Beyond simple vector search, Souvenir builds a knowledge graph where:
 - **Nodes** represent memory units (chunks, entities, concepts)
 - **Edges** represent relationships (similarity, containment, semantic connections)
-- **Graph operations** enable sophisticated memory traversal and exploration
+- **Graph Exploration** - `searchMemory` automatically traverses relationships to enrich context
 
-```typescript
-// Find memories connected to a specific node
-const neighborhood = await souvenir.getNeighborhood(nodeId, { maxDepth: 2 });
-
-// Find paths between two memories
-const paths = await souvenir.findPaths(startNodeId, endNodeId);
-
-// Discover clusters of related concepts
-const clusters = await souvenir.findClusters(sessionId);
-```
+The knowledge graph enables sophisticated reasoning. When you search with `searchMemory`, it:
+1. Finds semantically relevant memories via vector similarity
+2. Explores connected nodes in the graph (relationships, concepts)
+3. Returns formatted context that's immediately usable by LLMs
 
 ### Sessions
 
-Sessions group related memories together, enabling:
-- Scoped searches (only search within a conversation or topic)
-- Context isolation (separate work memories from personal ones)
-- Bulk operations (process or analyze all memories in a session)
+Sessions group related memories together:
+- **Isolation** - Keep separate conversation contexts or topics isolated
+- **Scoped Search** - `searchMemory` respects session boundaries
+- **Context Management** - One session per conversation thread or user context
 
 ## Architecture
 
@@ -170,47 +198,91 @@ This approach is inspired by research on optimizing the interface between knowle
 
 ## API Reference
 
-### Core Methods
+### Tools (Primary Interface)
 
-#### `add(data: string, options?: AddOptions): Promise<string[]>`
-Add data to memory. Returns chunk IDs.
+Use these tools with Vercel AI SDK - agents call them autonomously:
 
-#### `processAll(options?: SouvenirProcessOptions): Promise<void>`
-Process unprocessed chunks (extract entities, relationships, generate embeddings).
+#### `storeMemory(content, metadata?)`
+Store information in long-term memory. Automatically chunks, extracts entities, builds relationships, and generates embeddings.
 
-#### `search(query: string, options?: SearchOptions): Promise<SearchResult[]>`
-Search memory using semantic similarity.
+**Parameters:**
+- `content` (string) - The information to remember
+- `metadata` (optional object) - Additional context or tags
 
-#### `createSession(name?: string, metadata?: Record<string, unknown>): Promise<MemorySession>`
-Create a new memory session.
+**Returns:**
+- `success` (boolean) - Operation status
+- `chunkIds` (string[]) - IDs of created chunks
+- `message` (string) - Summary of what was stored
 
-### Graph Operations
+#### `searchMemory(query, explore?)`
+Search memory for relevant information with automatic graph exploration.
 
-#### `getNeighborhood(nodeId: string, options?: TraversalOptions)`
-Get nodes within N hops of a starting node.
+**Parameters:**
+- `query` (string) - What to search for
+- `explore` (optional boolean, default: true) - Whether to explore related memories via knowledge graph
 
-#### `findPaths(startNodeId: string, endNodeId: string, options?: TraversalOptions)`
+**Returns:**
+- `context` (string) - LLM-consumable formatted results with relevant memories and relationships
+- `message` (string) - Summary of search results
+- `metadata` - Query details and result count
+
+### Core Methods (For Advanced Usage)
+
+Direct Souvenir API methods are available for advanced scenarios:
+
+#### `search(query, options?)`
+Low-level search with strategy selection. Returns raw results.
+
+#### `getNeighborhood(nodeId, options?)`
+Get nodes connected to a specific memory node.
+
+#### `findPaths(startNodeId, endNodeId, options?)`
 Find connection paths between two memories.
 
-#### `findClusters(sessionId?: string, minClusterSize?: number)`
+#### `findClusters(sessionId?, minClusterSize?)`
 Discover clusters of related memories.
-
-### Tools API
-
-See [tools documentation](./src/tools/README.md) for the complete Vercel AI SDK tools interface.
 
 ## Configuration
 
 ```typescript
 interface SouvenirConfig {
-  databaseUrl: string;              // PostgreSQL connection string
-  embeddingDimensions?: number;     // Default: 1536 (OpenAI ada-002)
+  databaseUrl: string;              // PostgreSQL connection string (required)
+  embeddingDimensions?: number;     // Default: 1536 (OpenAI text-embedding-3-small)
   chunkSize?: number;               // Default: 1000
   chunkOverlap?: number;            // Default: 200
-  minRelevanceScore?: number;       // Default: 0.7
+  minRelevanceScore?: number;       // Default: 0.7 (0-1 range)
   maxResults?: number;              // Default: 10
+  chunkingMode?: 'token' | 'recursive'; // Default: 'recursive'
+  chunkingTokenizer?: string;       // Optional: custom tokenizer
+  minCharactersPerChunk?: number;   // Optional: minimum chunk size
+}
+
+interface SouvenirOptions {
+  sessionId: string;                // Required: Unique session identifier for memory isolation
+  embeddingProvider: EmbeddingProvider; // Required: AI embedding model
+  processorModel?: LanguageModel;   // Optional: LLM for entity/relationship extraction
+  promptTemplates?: PromptTemplates; // Optional: Custom extraction prompts
 }
 ```
+
+**Example with custom configuration:**
+```typescript
+const souvenir = new Souvenir(
+  {
+    databaseUrl: process.env.DATABASE_URL!,
+    embeddingDimensions: 1536,
+    chunkSize: 1500,        // Larger chunks for more context
+    chunkOverlap: 300,      // More overlap for better continuity
+    minRelevanceScore: 0.65, // Lower threshold for more results
+  },
+  {
+    sessionId: 'user-123',
+    embeddingProvider: new AIEmbeddingProvider(
+      openai.embedding('text-embedding-3-small')
+    ),
+    processorModel: openai('gpt-4o'),
+  }
+);
 
 ## Multi-Runtime Support
 
@@ -220,14 +292,6 @@ Souvenir works across multiple JavaScript runtimes:
 - **Bun** ✅
 - **Deno** ✅ (with npm specifiers)
 - **Cloudflare Workers** ✅ (with polyfills)
-
-## Examples
-
-See the [`examples/`](./examples) directory for complete working examples:
-
-- **Basic Usage** - Core functionality walkthrough
-- **With Tools** - Using Souvenir tools with Vercel AI SDK
-- **Knowledge Graph** - Exploring graph operations and relationships
 
 ## Database Schema
 

@@ -17,9 +17,8 @@ You just create the tools and add them to your agent. That's it.
 ### 1. Create Souvenir Instance (Per User/Session)
 
 ```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
+import { Souvenir, AIEmbeddingProvider } from '@upstart.gg/souvenir';
 import { openai } from '@ai-sdk/openai';
-import { embed } from 'ai';
 
 // Create one instance per user/session
 const souvenir = new Souvenir(
@@ -29,15 +28,9 @@ const souvenir = new Souvenir(
   },
   {
     sessionId: 'user-123', // Bind to specific user/session
-    embeddingProvider: {
-      embed: async (text) => {
-        const { embedding } = await embed({
-          model: openai.embedding('text-embedding-3-small'),
-          value: text,
-        });
-        return embedding;
-      },
-    },
+    embeddingProvider: new AIEmbeddingProvider(
+      openai.embedding('text-embedding-3-small')
+    ),
     processorModel: openai('gpt-4o-mini'),
   }
 );
@@ -48,7 +41,7 @@ const souvenir = new Souvenir(
 ### 2. Create Memory Tools
 
 ```typescript
-import { createSouvenirTools } from '@upstart-gg/souvenir/tools';
+import { createSouvenirTools } from '@upstart.gg/souvenir/tools';
 
 const tools = createSouvenirTools(souvenir);
 ```
@@ -83,10 +76,10 @@ console.log(result.text);
 Here's a full working agent with memory:
 
 ```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
-import { createSouvenirTools } from '@upstart-gg/souvenir/tools';
+import { Souvenir, AIEmbeddingProvider } from '@upstart.gg/souvenir';
+import { createSouvenirTools } from '@upstart.gg/souvenir/tools';
 import { openai } from '@ai-sdk/openai';
-import { generateText, embed } from 'ai';
+import { generateText } from 'ai';
 
 // Helper to create Souvenir instance for a user
 function createUserMemory(sessionId: string) {
@@ -97,15 +90,9 @@ function createUserMemory(sessionId: string) {
     },
     {
       sessionId, // Bind to user session
-      embeddingProvider: {
-        embed: async (text) => {
-          const { embedding } = await embed({
-            model: openai.embedding('text-embedding-3-small'),
-            value: text,
-          });
-          return embedding;
-        },
-      },
+      embeddingProvider: new AIEmbeddingProvider(
+        openai.embedding('text-embedding-3-small')
+      ),
       processorModel: openai('gpt-4o-mini'),
     }
   );
@@ -242,15 +229,29 @@ The agent does NOT store:
 ### Minimal Configuration
 
 ```typescript
-const souvenir = new Souvenir({
-  databaseUrl: process.env.DATABASE_URL!,
-  embeddingDimensions: 1536, // Must match your embedding model
-});
+import { Souvenir, AIEmbeddingProvider } from '@upstart.gg/souvenir';
+import { openai } from '@ai-sdk/openai';
+
+const souvenir = new Souvenir(
+  {
+    databaseUrl: process.env.DATABASE_URL!,
+    embeddingDimensions: 1536, // Must match your embedding model
+  },
+  {
+    sessionId: 'user-123',
+    embeddingProvider: new AIEmbeddingProvider(
+      openai.embedding('text-embedding-3-small')
+    ),
+  }
+);
 ```
 
-### With Options
+### With Full Options
 
 ```typescript
+import { Souvenir, AIEmbeddingProvider } from '@upstart.gg/souvenir';
+import { openai } from '@ai-sdk/openai';
+
 const souvenir = new Souvenir(
   {
     databaseUrl: process.env.DATABASE_URL!,
@@ -259,15 +260,20 @@ const souvenir = new Souvenir(
     // Optional: Adjust chunking (defaults are good for most cases)
     chunkSize: 1000,
     chunkOverlap: 200,
+    chunkingMode: 'recursive', // or 'token'
 
     // Optional: Filter search results
     minRelevanceScore: 0.7,
+    maxResults: 10,
   },
   {
+    // Required: Session identifier for data isolation
+    sessionId: 'user-123',
+
     // Required: Embedding provider
-    embeddingProvider: {
-      generateEmbedding: async (text) => { /* ... */ },
-    },
+    embeddingProvider: new AIEmbeddingProvider(
+      openai.embedding('text-embedding-3-small')
+    ),
 
     // Required: LLM for entity/relationship extraction
     processorModel: openai('gpt-4o-mini'),
@@ -333,9 +339,9 @@ try {
 
 ## Next Steps
 
-- [See the Tools in Action](/examples/vercel-ai-sdk) - Complete example with streaming
-- [Knowledge Graph Explanation](/guide/knowledge-graphs) - How the graph works
-- [Configuration Options](/configuration/) - All configuration options
+- [ETL Pipeline](/guide/etl-pipeline) - How data flows through the system
+- [Retrieval Strategies](/guide/retrieval-strategies) - Different ways to search
+- [Chunking](/guide/chunking) - Text chunking options
 
 ---
 

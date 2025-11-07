@@ -1,5 +1,5 @@
-import { EmbeddingProvider } from '../types.js';
-import { embed, embedMany } from 'ai';
+import { embed, embedMany } from "ai";
+import type { EmbeddingProvider } from "../types.js";
 
 /**
  * Embedding provider using Vercel AI SDK
@@ -7,8 +7,8 @@ import { embed, embedMany } from 'ai';
  */
 export class AIEmbeddingProvider implements EmbeddingProvider {
   constructor(
-    private model: Parameters<typeof embed>[0]['model'],
-    public dimensions: number = 1536
+    private model: Parameters<typeof embed>[0]["model"],
+    public dimensions: number = 1536,
   ) {}
 
   async embed(text: string): Promise<number[]> {

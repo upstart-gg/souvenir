@@ -1,0 +1,10 @@
+[test]
+# ISO Compliance: Use dbmate migrations for test database setup
+preload = ["./src/__tests__/setup.ts"]
+# Timeout for each test (30 seconds)
+timeout = 30000
+
+[define]
+# Environment variables for tests
+# Uses localhost:54322 to connect to dockerized PostgreSQL from host
+DATABASE_URL_TEST = "postgresql://postgres:postgres@localhost:54322/souvenir_test"

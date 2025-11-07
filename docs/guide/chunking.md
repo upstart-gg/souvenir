@@ -98,7 +98,7 @@ const souvenir = new Souvenir({
 
 **Custom Rules** (Advanced):
 ```typescript
-import { chunkText } from '@upstart-gg/souvenir';
+import { chunkText } from '@upstart.gg/souvenir';
 
 const chunks = await chunkText(documentation, {
   mode: 'recursive',
@@ -281,7 +281,7 @@ See the [Examples section](/examples/custom-chunking) for complete working examp
 Test chunking before committing to a strategy:
 
 ```typescript
-import { chunkText } from '@upstart-gg/souvenir';
+import { chunkText } from '@upstart.gg/souvenir';
 
 // Test with sample content
 const sampleText = "Your typical memory content...";
@@ -370,6 +370,8 @@ await souvenir.processAll({ sessionId, generateEmbeddings: true });
 
 ## Next Steps
 
-- [Examples: Custom Chunking](/examples/custom-chunking) - See both strategies in action
-- [API Reference: Chunking](/api/chunking) - Complete API docs
-- [Configuration](/configuration/) - All configuration options
+- [ETL Pipeline](/guide/etl-pipeline) - How chunking fits in
+- [Quick Start](/guide/quick-start) - Configuration reference
+- [Retrieval Strategies](/guide/retrieval-strategies) - How chunks are retrieved
+
+````

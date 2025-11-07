@@ -3,20 +3,20 @@
  * Implements multiple retrieval approaches from the Cognee paper
  */
 
-import type { MemoryRepository } from '../db/repository.js';
-import type { GraphOperations } from '../graph/operations.js';
+import type { MemoryRepository } from "../db/repository.js";
+import type { GraphOperations } from "../graph/operations.js";
 import type {
-  SearchResult,
+  EmbeddingProvider,
   GraphRetrievalResult,
-  SearchOptions,
   MemoryNode,
   MemoryRelationship,
-  EmbeddingProvider,
-} from '../types.js';
+  SearchOptions,
+  SearchResult,
+} from "../types.js";
 import {
   formatGraphTripletsForLLM,
   formatSummaryForLLM,
-} from '../utils/formatting.js';
+} from "../utils/formatting.js";
 
 /**
  * Retrieval strategy implementations
@@ -25,7 +25,7 @@ export class RetrievalStrategies {
   constructor(
     private repository: MemoryRepository,
     private graph: GraphOperations,
-    private embedding?: EmbeddingProvider
+    private embedding: EmbeddingProvider | undefined,
   ) {}
 
   /**
@@ -34,10 +34,10 @@ export class RetrievalStrategies {
    */
   async vectorRetrieval(
     query: string,
-    options: SearchOptions = {}
+    options: SearchOptions = {},
   ): Promise<SearchResult[]> {
     if (!this.embedding) {
-      throw new Error('Embedding provider required for vector retrieval');
+      throw new Error("Embedding provider required for vector retrieval");
     }
 
     const {
@@ -57,7 +57,7 @@ export class RetrievalStrategies {
       queryEmbedding,
       limit * 2,
       minScore,
-      nodeTypes
+      nodeTypes,
     );
 
     // Filter by session if provided
@@ -75,7 +75,7 @@ export class RetrievalStrategies {
       for (const result of results) {
         result.relationships = await this.repository.getRelationshipsForNode(
           result.node.id,
-          relationshipTypes
+          relationshipTypes,
         );
       }
     }
@@ -89,16 +89,16 @@ export class RetrievalStrategies {
    */
   async summaryRetrieval(
     query: string,
-    options: SearchOptions = {}
+    options: SearchOptions = {},
   ): Promise<SearchResult[]> {
     if (!this.embedding) {
-      throw new Error('Embedding provider required for summary retrieval');
+      throw new Error("Embedding provider required for summary retrieval");
     }
 
     // Search for summary nodes
     const summaryResults = await this.vectorRetrieval(query, {
       ...options,
-      nodeTypes: ['summary', ...(options.nodeTypes || [])],
+      nodeTypes: ["summary", ...(options.nodeTypes || [])],
     });
 
     return summaryResults;
@@ -110,13 +110,15 @@ export class RetrievalStrategies {
    */
   async graphNeighborhoodRetrieval(
     query: string,
-    options: SearchOptions = {}
+    options: SearchOptions = {},
   ): Promise<GraphRetrievalResult[]> {
     if (!this.embedding) {
-      throw new Error('Embedding provider required for graph neighborhood retrieval');
+      throw new Error(
+        "Embedding provider required for graph neighborhood retrieval",
+      );
     }
 
-    const { limit = 5, topK = 10, sessionId } = options;
+    const { limit = 5, topK = 10 } = options;
 
     // First, find relevant nodes via vector search
     const initialResults = await this.vectorRetrieval(query, {
@@ -144,7 +146,7 @@ export class RetrievalStrategies {
       const formattedTriplets = formatGraphTripletsForLLM(
         result.node,
         neighborhood.relationships,
-        allNodes
+        allNodes,
       );
 
       graphResults.push({
@@ -164,23 +166,23 @@ export class RetrievalStrategies {
    */
   async graphCompletionRetrieval(
     query: string,
-    options: SearchOptions = {}
+    options: SearchOptions = {},
   ): Promise<GraphRetrievalResult[]> {
     if (!this.embedding) {
-      throw new Error('Embedding provider required for graph completion');
+      throw new Error("Embedding provider required for graph completion");
     }
 
-    const { limit = 5, topK = 20, sessionId } = options;
+    const { limit = 5, topK = 20 } = options;
 
     // Find relevant entity nodes
     const entityResults = await this.vectorRetrieval(query, {
       ...options,
       nodeTypes: options.nodeTypes || [
-        'entity',
-        'person',
-        'organization',
-        'concept',
-        'event',
+        "entity",
+        "person",
+        "organization",
+        "concept",
+        "event",
       ],
       limit: limit,
     });
@@ -205,7 +207,7 @@ export class RetrievalStrategies {
       const formattedTriplets = formatGraphTripletsForLLM(
         result.node,
         neighborhood.relationships,
-        allNodes
+        allNodes,
       );
 
       graphResults.push({
@@ -225,10 +227,10 @@ export class RetrievalStrategies {
    */
   async graphSummaryCompletionRetrieval(
     query: string,
-    options: SearchOptions = {}
+    options: SearchOptions = {},
   ): Promise<GraphRetrievalResult[]> {
     if (!this.embedding) {
-      throw new Error('Embedding provider required');
+      throw new Error("Embedding provider required");
     }
 
     const { limit = 5, topK = 10 } = options;
@@ -243,11 +245,11 @@ export class RetrievalStrategies {
     const graphResults: GraphRetrievalResult[] = [];
 
     for (const result of summaryResults) {
-      const sourceIds = (result.node.metadata.sourceIds as string[]) || [];
+      const sourceIds = (result.node.metadata['sourceIds'] as string[]) || [];
 
       // Get neighborhood of source nodes
-      let allNodes = new Map<string, MemoryNode>();
-      let allRelationships: MemoryRelationship[] = [];
+      const allNodes = new Map<string, MemoryNode>();
+      const allRelationships: MemoryRelationship[] = [];
 
       allNodes.set(result.node.id, result.node);
 
@@ -268,7 +270,7 @@ export class RetrievalStrategies {
       const graphText = formatGraphTripletsForLLM(
         result.node,
         allRelationships,
-        allNodes
+        allNodes,
       );
 
       graphResults.push({
@@ -291,7 +293,7 @@ export class RetrievalStrategies {
    */
   async hybridRetrieval(
     query: string,
-    options: SearchOptions = {}
+    options: SearchOptions = {},
   ): Promise<{
     vectorResults: SearchResult[];
     graphResults: GraphRetrievalResult[];
@@ -301,7 +303,10 @@ export class RetrievalStrategies {
     // Run multiple strategies in parallel
     const [vectorResults, graphResults] = await Promise.all([
       this.vectorRetrieval(query, { ...options, limit: Math.ceil(limit / 2) }),
-      this.graphCompletionRetrieval(query, { ...options, limit: Math.ceil(limit / 2) }),
+      this.graphCompletionRetrieval(query, {
+        ...options,
+        limit: Math.ceil(limit / 2),
+      }),
     ]);
 
     return {

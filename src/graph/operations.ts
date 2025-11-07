@@ -1,10 +1,10 @@
-import { MemoryRepository } from '../db/repository.js';
-import {
+import type { MemoryRepository } from "../db/repository.js";
+import type {
+  GraphPath,
   MemoryNode,
   MemoryRelationship,
-  GraphPath,
   TraversalOptions,
-} from '../types.js';
+} from "../types.js";
 
 /**
  * Graph operations for knowledge graph traversal
@@ -18,7 +18,7 @@ export class GraphOperations {
   async findPaths(
     startNodeId: string,
     endNodeId: string,
-    options: TraversalOptions = {}
+    options: TraversalOptions = {},
   ): Promise<GraphPath[]> {
     const { maxDepth = 5, relationshipTypes, nodeTypes } = options;
 
@@ -47,10 +47,14 @@ export class GraphOperations {
     ];
 
     while (queue.length > 0) {
-      const current = queue.shift()!;
+      const current = queue.shift();
+      if (!current) continue;
 
       if (current.currentId === endNodeId) {
-        const totalWeight = current.relationships.reduce((sum, r) => sum + r.weight, 0);
+        const totalWeight = current.relationships.reduce(
+          (sum, r) => sum + r.weight,
+          0,
+        );
         paths.push({
           nodes: current.path,
           relationships: current.relationships,
@@ -65,11 +69,12 @@ export class GraphOperations {
 
       const relationships = await this.repository.getRelationshipsForNode(
         current.currentId,
-        relationshipTypes
+        relationshipTypes,
       );
 
       for (const rel of relationships) {
-        const nextId = rel.sourceId === current.currentId ? rel.targetId : rel.sourceId;
+        const nextId =
+          rel.sourceId === current.currentId ? rel.targetId : rel.sourceId;
 
         if (current.visited.has(nextId)) {
           continue;
@@ -104,7 +109,7 @@ export class GraphOperations {
    */
   async getNeighborhood(
     nodeId: string,
-    options: TraversalOptions = {}
+    options: TraversalOptions = {},
   ): Promise<{
     nodes: MemoryNode[];
     relationships: MemoryRelationship[];
@@ -125,7 +130,8 @@ export class GraphOperations {
     const visited = new Set<string>([nodeId]);
 
     while (queue.length > 0) {
-      const current = queue.shift()!;
+      const current = queue.shift();
+      if (!current) continue;
 
       if (current.depth >= maxDepth) {
         continue;
@@ -133,13 +139,14 @@ export class GraphOperations {
 
       const rels = await this.repository.getRelationshipsForNode(
         current.id,
-        relationshipTypes
+        relationshipTypes,
       );
 
       for (const rel of rels) {
         relationships.set(rel.id, rel);
 
-        const nextId = rel.sourceId === current.id ? rel.targetId : rel.sourceId;
+        const nextId =
+          rel.sourceId === current.id ? rel.targetId : rel.sourceId;
 
         if (visited.has(nextId)) {
           continue;
@@ -169,7 +176,7 @@ export class GraphOperations {
    */
   async findClusters(
     sessionId?: string,
-    minClusterSize: number = 3
+    minClusterSize: number = 3,
   ): Promise<MemoryNode[][]> {
     // Get all nodes in session or all nodes
     const nodes = sessionId
@@ -212,7 +219,8 @@ export class GraphOperations {
       const stack = [node.id];
 
       while (stack.length > 0) {
-        const currentId = stack.pop()!;
+        const currentId = stack.pop();
+        if (!currentId) continue;
 
         if (visited.has(currentId)) {
           continue;

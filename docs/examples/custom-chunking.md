@@ -9,7 +9,7 @@ This guide shows practical examples of both chunking strategies for different ag
 **Why token mode**: Short conversational memories don't have structure to preserve.
 
 ```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
+import { Souvenir } from '@upstart.gg/souvenir';
 import { openai } from '@ai-sdk/openai';
 import { embed } from 'ai';
 
@@ -95,7 +95,7 @@ await souvenir.close();
 **Why recursive mode**: Documentation has headers, sections, and paragraphs that should stay together.
 
 ```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
+import { Souvenir } from '@upstart.gg/souvenir';
 import { openai } from '@ai-sdk/openai';
 import { embed } from 'ai';
 
@@ -219,7 +219,7 @@ await souvenir.close();
 ### Approach 1: Separate Instances
 
 ```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
+import { Souvenir } from '@upstart.gg/souvenir';
 import { openai } from '@ai-sdk/openai';
 import { embed } from 'ai';
 
@@ -301,7 +301,7 @@ await documentMemory.close();
 Use the chunking utility directly for fine control:
 
 ```typescript
-import { Souvenir, chunkText } from '@upstart-gg/souvenir';
+import { Souvenir, chunkText } from '@upstart.gg/souvenir';
 import { openai } from '@ai-sdk/openai';
 import { embed } from 'ai';
 
@@ -379,7 +379,7 @@ await souvenir.close();
 **Use case**: Index a codebase with custom splitting rules.
 
 ```typescript
-import { chunkText } from '@upstart-gg/souvenir';
+import { chunkText } from '@upstart.gg/souvenir';
 
 const sourceCode = `
 class DatabaseClient {
@@ -458,7 +458,7 @@ codeChunks.forEach((chunk, i) => {
 **Use case**: Find the optimal chunking configuration for your content.
 
 ```typescript
-import { chunkText } from '@upstart-gg/souvenir';
+import { chunkText } from '@upstart.gg/souvenir';
 
 const sampleContent = `
 Your typical agent memory content here.
@@ -524,7 +524,7 @@ for (const { name, config } of configurations) {
 **Use case**: Complete production setup with best practices.
 
 ```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
+import { Souvenir } from '@upstart.gg/souvenir';
 import { openai } from '@ai-sdk/openai';
 import { embed } from 'ai';
 
@@ -646,5 +646,6 @@ try {
 ## Next Steps
 
 - [Chunking Guide](/guide/chunking) - Detailed explanation
-- [API Reference](/api/chunking) - Complete API docs
-- [Configuration](/configuration/chunking) - All options
+- [Quick Start](/guide/quick-start) - Get started
+- [Retrieval Strategies](/guide/retrieval-strategies) - How chunks are searched
+````

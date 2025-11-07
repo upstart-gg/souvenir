@@ -15,25 +15,25 @@ Before installing Souvenir, ensure you have:
 == npm
 
 ```bash
-npm install @upstart-gg/souvenir ai zod
+npm install @upstart.gg/souvenir ai zod
 ```
 
 == bun
 
 ```bash
-bun add @upstart-gg/souvenir ai zod
+bun add @upstart.gg/souvenir ai zod
 ```
 
 == pnpm
 
 ```bash
-pnpm add @upstart-gg/souvenir ai zod
+pnpm add @upstart.gg/souvenir ai zod
 ```
 
 == yarn
 
 ```bash
-yarn add @upstart-gg/souvenir ai zod
+yarn add @upstart.gg/souvenir ai zod
 ```
 
 :::
@@ -147,18 +147,18 @@ npm install -g dbmate
 Run the migrations:
 
 ```bash
-cd node_modules/@upstart-gg/souvenir
+cd node_modules/@upstart.gg/souvenir
 dbmate -d db/migrations -u "postgresql://localhost:5432/souvenir?sslmode=disable" up
 ```
 
-Or manually execute the SQL from `node_modules/@upstart-gg/souvenir/db/migrations/`.
+Or manually execute the SQL from `node_modules/@upstart.gg/souvenir/db/migrations/`.
 
 ## Verify Installation
 
 Create a test file to verify everything works:
 
 ```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
+import { Souvenir } from '@upstart.gg/souvenir';
 
 const souvenir = new Souvenir({
   databaseUrl: 'postgresql://localhost:5432/souvenir?sslmode=disable',

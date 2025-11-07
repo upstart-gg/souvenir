@@ -1,31 +1,28 @@
-import { DatabaseClient } from '../db/client.js';
-import { MemoryRepository } from '../db/repository.js';
-import { GraphOperations } from '../graph/operations.js';
-import { SouvenirProcessor } from './processor.js';
-import { RetrievalStrategies } from './retrieval.js';
-import { chunkText } from '../utils/chunking.js';
-import {
-  formatSearchResultsForLLM,
-  formatGraphRetrievalForLLM,
-  formatHybridContextForLLM,
-} from '../utils/formatting.js';
-import {
-  SouvenirConfig,
+import { DatabaseClient } from "../db/client.js";
+import { MemoryRepository } from "../db/repository.js";
+import { GraphOperations } from "../graph/operations.js";
+import type {
   AddOptions,
-  SearchOptions,
-  SouvenirProcessOptions,
-  SearchResult,
-  GraphRetrievalResult,
+  EmbeddingProvider,
   FormattedContext,
+  GraphPath,
   MemoryNode,
   MemorySession,
-  EmbeddingProvider,
-  GraphPath,
-  TraversalOptions,
   PromptTemplates,
+  SearchOptions,
+  SearchResult,
+  SouvenirConfig,
+  SouvenirProcessOptions,
   SummaryMetadata,
-} from '../types.js';
-import type { EmbedParams } from 'ai';
+  TraversalOptions,
+} from "../types.js";
+import { chunkText } from "../utils/chunking.js";
+import {
+  formatGraphRetrievalForLLM,
+  formatHybridContextForLLM,
+} from "../utils/formatting.js";
+import { SouvenirProcessor } from "./processor.js";
+import { RetrievalStrategies } from "./retrieval.js";
 
 /**
  * Main Souvenir class - Memory management for AI agents
@@ -48,12 +45,12 @@ export class Souvenir {
     options: {
       sessionId: string;
       embeddingProvider?: EmbeddingProvider;
-      processorModel?: Parameters<typeof import('ai').generateText>[0]['model'];
+      processorModel?: Parameters<typeof import("ai").generateText>[0]["model"];
       promptTemplates?: Partial<PromptTemplates>;
-    }
+    },
   ) {
     this.sessionId = options.sessionId;
-    this.db = new DatabaseClient(config.databaseUrl);
+    this.db = new DatabaseClient(this.config["databaseUrl"] as string);
     this.repository = new MemoryRepository(this.db);
     this.graph = new GraphOperations(this.repository);
 
@@ -64,7 +61,7 @@ export class Souvenir {
     if (options?.processorModel) {
       this.processor = new SouvenirProcessor(
         options.processorModel,
-        options.promptTemplates
+        options.promptTemplates,
       );
     }
 
@@ -72,7 +69,7 @@ export class Souvenir {
     this.retrieval = new RetrievalStrategies(
       this.repository,
       this.graph,
-      this.embedding
+      this.embedding,
     );
   }
 
@@ -87,23 +84,27 @@ export class Souvenir {
 
     try {
       // Generate a test embedding
-      const testEmbedding = await this.embedding.embed('test');
+      const testEmbedding = await this.embedding.embed("test");
 
       // Check if dimensions match
-      if (testEmbedding.length !== this.config.embeddingDimensions) {
+      const expectedDims = this.config["embeddingDimensions"] as number;
+      if (testEmbedding.length !== expectedDims) {
         throw new Error(
-          `Embedding dimension mismatch: expected ${this.config.embeddingDimensions}, but got ${testEmbedding.length}. ` +
-          `Please update your SouvenirConfig.embeddingDimensions to match your embedding model's output dimensions.`
+          `Embedding dimension mismatch: expected ${expectedDims}, but got ${testEmbedding.length}. ` +
+            `Please update your SouvenirConfig.embeddingDimensions to match your embedding model's output dimensions.`,
         );
       }
 
       this.embeddingValidated = true;
     } catch (error) {
-      if (error instanceof Error && error.message.includes('dimension mismatch')) {
+      if (
+        error instanceof Error &&
+        error.message.includes("dimension mismatch")
+      ) {
         throw error;
       }
       // If embedding generation failed for another reason, log warning but don't fail
-      console.warn('Could not validate embedding dimensions:', error);
+      console.warn("Could not validate embedding dimensions:", error);
     }
   }
 
@@ -117,21 +118,31 @@ export class Souvenir {
     const { sourceIdentifier, metadata = {} } = options;
 
     // Chunk the data
+    const chunkingMode = this.config["chunkingMode"] as string;
+    const chunkSize = this.config["chunkSize"] as number;
+    const chunkingTokenizer = this.config["chunkingTokenizer"] as
+      | string
+      | undefined;
+    const minCharactersPerChunk = this.config["minCharactersPerChunk"] as
+      | number
+      | undefined;
+    const chunkOverlap = this.config["chunkOverlap"] as number;
+
     const chunks = await chunkText(
       data,
-      this.config.chunkingMode === 'recursive'
+      chunkingMode === "recursive"
         ? {
-            mode: 'recursive',
-            chunkSize: this.config.chunkSize,
-            tokenizer: this.config.chunkingTokenizer,
-            minCharactersPerChunk: this.config.minCharactersPerChunk,
+            mode: "recursive",
+            chunkSize: chunkSize,
+            tokenizer: chunkingTokenizer,
+            minCharactersPerChunk: minCharactersPerChunk,
           }
         : {
-            mode: 'token',
-            chunkSize: this.config.chunkSize,
-            chunkOverlap: this.config.chunkOverlap,
-            tokenizer: this.config.chunkingTokenizer,
-          }
+            mode: "token",
+            chunkSize: chunkSize,
+            chunkOverlap: chunkOverlap,
+            tokenizer: chunkingTokenizer,
+          },
     );
 
     const chunkIds: string[] = [];
@@ -143,14 +154,16 @@ export class Souvenir {
     };
 
     // Store chunks
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = await this.repository.createChunk(
-        chunks[i],
+    let i = 0;
+    for (const chunk of chunks) {
+      const createdChunk = await this.repository.createChunk(
+        chunk,
         i,
         sourceIdentifier,
-        chunkMetadata
+        chunkMetadata,
       );
-      chunkIds.push(chunk.id);
+      chunkIds.push(createdChunk.id);
+      i++;
     }
 
     return chunkIds;
@@ -177,10 +190,14 @@ export class Souvenir {
     for (let i = 0; i < chunks.length; i += batchSize) {
       const batch = chunks.slice(i, i + batchSize);
       const results = await Promise.all(
-        batch.map((chunk) => this.processChunk(chunk, { ...options, generateEmbeddings }))
+        batch.map((chunk) =>
+          this.processChunk(chunk, { ...options, generateEmbeddings }),
+        ),
       );
       // Collect node IDs for summary generation
-      processedNodeIds.push(...results.filter((id) => id !== null) as string[]);
+      processedNodeIds.push(
+        ...(results.filter((id) => id !== null) as string[]),
+      );
     }
 
     // Create relationships between nodes in session
@@ -199,9 +216,9 @@ export class Souvenir {
    */
   private async processChunk(
     chunk: typeof this.repository extends MemoryRepository
-      ? Awaited<ReturnType<MemoryRepository['createChunk']>>
+      ? Awaited<ReturnType<MemoryRepository["createChunk"]>>
       : never,
-    options: SouvenirProcessOptions & { generateEmbeddings?: boolean }
+    options: SouvenirProcessOptions & { generateEmbeddings?: boolean },
   ): Promise<string | null> {
     const { generateEmbeddings = true } = options;
 
@@ -220,12 +237,12 @@ export class Souvenir {
     const chunkNode = await this.repository.createNode(
       chunk.content,
       embedding,
-      'chunk',
+      "chunk",
       {
         ...chunk.metadata,
         sourceIdentifier: chunk.sourceIdentifier,
         chunkIndex: chunk.chunkIndex,
-      }
+      },
     );
 
     // Add to session
@@ -233,28 +250,30 @@ export class Souvenir {
 
     // Extract entities and relationships if processor available
     if (this.processor) {
-      const { entities, relationships, summary } = await this.processor.processChunk(
-        chunk,
-        options
-      );
+      const { entities, relationships, summary } =
+        await this.processor.processChunk(chunk, options);
 
       // Create nodes for entities (with deduplication)
       const entityNodes = await Promise.all(
         entities.map(async (entity) => {
           // Check if entity already exists (deduplication)
-          let node = await this.repository.findNodeByContentAndType(entity.text, entity.type);
+          let node = await this.repository.findNodeByContentAndType(
+            entity.text,
+            entity.type,
+          );
 
           if (!node) {
             // Entity doesn't exist, create it
-            const entityEmbedding = generateEmbeddings && this.embedding
-              ? await this.embedding.embed(entity.text)
-              : null;
+            const entityEmbedding =
+              generateEmbeddings && this.embedding
+                ? await this.embedding.embed(entity.text)
+                : null;
 
             node = await this.repository.createNode(
               entity.text,
               entityEmbedding,
               entity.type,
-              { ...entity.metadata, extractedFrom: chunk.id }
+              { ...entity.metadata, extractedFrom: chunk.id },
             );
           }
 
@@ -262,16 +281,16 @@ export class Souvenir {
           await this.repository.createRelationship(
             chunkNode.id,
             node.id,
-            'contains',
+            "contains",
             1.0,
-            {}
+            {},
           );
 
           // Add entity to session
           await this.repository.addNodeToSession(this.sessionId, node.id);
 
           return node;
-        })
+        }),
       );
 
       // Create relationships between entities
@@ -285,13 +304,13 @@ export class Souvenir {
             targetNode.id,
             rel.type,
             rel.weight || 1.0,
-            {}
+            {},
           );
         }
       }
 
       // Update chunk node with summary
-      await this.repository.updateNode(chunkNode.id, {
+      await this.repository.updateNode(this.sessionId, chunkNode.id, {
         metadata: { ...chunkNode.metadata, summary },
       });
     }
@@ -308,14 +327,16 @@ export class Souvenir {
    */
   private async generateSessionSummary(
     sessionId: string,
-    nodeIds: string[]
+    nodeIds: string[],
   ): Promise<void> {
     if (!this.processor || !this.embedding) {
       return;
     }
 
     // Get content from nodes
-    const nodes = await Promise.all(nodeIds.map((id) => this.repository.getNode(id)));
+    const nodes = await Promise.all(
+      nodeIds.map((id) => this.repository.getNode(id)),
+    );
     const validNodes = nodes.filter((n) => n !== null) as MemoryNode[];
 
     if (validNodes.length === 0) {
@@ -324,14 +345,18 @@ export class Souvenir {
 
     // Generate summary
     const contents = validNodes.map((n) => n.content);
-    const summary = await this.processor.generateMultiContentSummary(contents, 'session', 500);
+    const summary = await this.processor.generateMultiContentSummary(
+      contents,
+      "session",
+      500,
+    );
 
     // Generate embedding for summary
     const summaryEmbedding = await this.embedding.embed(summary);
 
     // Create summary node
     const summaryMetadata: SummaryMetadata = {
-      summaryOf: 'session',
+      summaryOf: "session",
       sourceIds: nodeIds,
       summaryLength: summary.length,
       generatedAt: new Date(),
@@ -340,8 +365,8 @@ export class Souvenir {
     const summaryNode = await this.repository.createNode(
       summary,
       summaryEmbedding,
-      'summary',
-      summaryMetadata
+      "summary",
+      summaryMetadata as unknown as Record<string, unknown>,
     );
 
     // Add summary node to session
@@ -353,9 +378,9 @@ export class Souvenir {
       await this.repository.createRelationship(
         summaryNode.id,
         nodeId,
-        'summarizes',
+        "summarizes",
         1.0,
-        {}
+        {},
       );
     }
   }
@@ -368,23 +393,29 @@ export class Souvenir {
 
     // Create relationships between semantically similar nodes
     for (let i = 0; i < nodes.length; i++) {
+      const node1 = nodes[i];
+      if (!node1) continue;
+
       for (let j = i + 1; j < nodes.length; j++) {
-        const node1 = nodes[i];
         const node2 = nodes[j];
+        if (!node2) continue;
 
         if (!node1.embedding || !node2.embedding) continue;
 
         // Calculate cosine similarity
-        const similarity = this.cosineSimilarity(node1.embedding, node2.embedding);
+        const similarity = this.cosineSimilarity(
+          node1.embedding,
+          node2.embedding,
+        );
 
         // Create relationship if similarity is high enough
         if (similarity >= 0.8) {
           await this.repository.createRelationship(
             node1.id,
             node2.id,
-            'similar_to',
+            "similar_to",
             similarity,
-            { similarity }
+            { similarity },
           );
         }
       }
@@ -395,51 +426,61 @@ export class Souvenir {
    * Search memory using configurable retrieval strategies (per paper)
    * Defaults to vector retrieval for backward compatibility
    */
-  async search(query: string, options: SearchOptions = {}): Promise<SearchResult[]> {
-    const strategy = options.strategy || 'vector';
-    const formatForLLM = options.formatForLLM || false;
+  async search(
+    query: string,
+    options: SearchOptions = {},
+  ): Promise<SearchResult[]> {
+    const strategy = options.strategy || "vector";
 
     // Add sessionId to options
     const searchOptions = { ...options, sessionId: this.sessionId };
 
     // Use appropriate retrieval strategy
     switch (strategy) {
-      case 'vector':
+      case "vector":
         return this.retrieval.vectorRetrieval(query, searchOptions);
 
-      case 'graph-neighborhood':
-        const neighborhoodResults = await this.retrieval.graphNeighborhoodRetrieval(
-          query,
-          searchOptions
-        );
+      case "graph-neighborhood": {
+        const neighborhoodResults =
+          await this.retrieval.graphNeighborhoodRetrieval(query, searchOptions);
         // Convert GraphRetrievalResult to SearchResult for backward compatibility
         return neighborhoodResults.map((gr) => ({
           node: gr.node,
           score: gr.score,
           relationships: gr.neighborhood.relationships,
         }));
+      }
 
-      case 'graph-completion':
-        const completionResults = await this.retrieval.graphCompletionRetrieval(query, searchOptions);
+      case "graph-completion": {
+        const completionResults = await this.retrieval.graphCompletionRetrieval(
+          query,
+          searchOptions,
+        );
         return completionResults.map((gr) => ({
           node: gr.node,
           score: gr.score,
           relationships: gr.neighborhood.relationships,
         }));
+      }
 
-      case 'graph-summary':
-        const summaryResults = await this.retrieval.graphSummaryCompletionRetrieval(
-          query,
-          searchOptions
-        );
+      case "graph-summary": {
+        const summaryResults =
+          await this.retrieval.graphSummaryCompletionRetrieval(
+            query,
+            searchOptions,
+          );
         return summaryResults.map((gr) => ({
           node: gr.node,
           score: gr.score,
           relationships: gr.neighborhood.relationships,
         }));
+      }
 
-      case 'hybrid':
-        const hybridResults = await this.retrieval.hybridRetrieval(query, searchOptions);
+      case "hybrid": {
+        const hybridResults = await this.retrieval.hybridRetrieval(
+          query,
+          searchOptions,
+        );
         // Combine and deduplicate
         const allResults = [...hybridResults.vectorResults];
         const seenIds = new Set(allResults.map((r) => r.node.id));
@@ -454,6 +495,7 @@ export class Souvenir {
           }
         }
         return allResults;
+      }
 
       default:
         throw new Error(`Unknown retrieval strategy: ${strategy}`);
@@ -464,24 +506,37 @@ export class Souvenir {
    * Search with graph neighborhood retrieval and get formatted context
    * Optimized for LLM consumption (per paper)
    */
-  async searchGraph(query: string, options: SearchOptions = {}): Promise<FormattedContext> {
+  async searchGraph(
+    query: string,
+    options: SearchOptions = {},
+  ): Promise<FormattedContext> {
     const searchOptions = { ...options, sessionId: this.sessionId };
-    const results = await this.retrieval.graphCompletionRetrieval(query, searchOptions);
+    const results = await this.retrieval.graphCompletionRetrieval(
+      query,
+      searchOptions,
+    );
     return formatGraphRetrievalForLLM(results);
   }
 
   /**
    * Search with hybrid strategy and get formatted context
    */
-  async searchHybrid(query: string, options: SearchOptions = {}): Promise<FormattedContext> {
+  async searchHybrid(
+    query: string,
+    options: SearchOptions = {},
+  ): Promise<FormattedContext> {
     const searchOptions = { ...options, sessionId: this.sessionId };
-    const { vectorResults, graphResults } = await this.retrieval.hybridRetrieval(query, searchOptions);
+    const { vectorResults, graphResults } =
+      await this.retrieval.hybridRetrieval(query, searchOptions);
     return formatHybridContextForLLM(vectorResults, graphResults);
   }
 
   // ============ Session Management ============
 
-  async createSession(name?: string, metadata?: Record<string, unknown>): Promise<MemorySession> {
+  async createSession(
+    name?: string,
+    metadata?: Record<string, unknown>,
+  ): Promise<MemorySession> {
     return this.repository.createSession(name, metadata);
   }
 
@@ -494,19 +549,25 @@ export class Souvenir {
   async findPaths(
     startNodeId: string,
     endNodeId: string,
-    options?: TraversalOptions
+    options?: TraversalOptions,
   ): Promise<GraphPath[]> {
     return this.graph.findPaths(startNodeId, endNodeId, options);
   }
 
   async getNeighborhood(
     nodeId: string,
-    options?: TraversalOptions
-  ): Promise<{ nodes: MemoryNode[]; relationships: import('../types.js').MemoryRelationship[] }> {
+    options?: TraversalOptions,
+  ): Promise<{
+    nodes: MemoryNode[];
+    relationships: import("../types.js").MemoryRelationship[];
+  }> {
     return this.graph.getNeighborhood(nodeId, options);
   }
 
-  async findClusters(sessionId?: string, minClusterSize?: number): Promise<MemoryNode[][]> {
+  async findClusters(
+    sessionId?: string,
+    minClusterSize?: number,
+  ): Promise<MemoryNode[][]> {
     return this.graph.findClusters(sessionId, minClusterSize);
   }
 
@@ -518,6 +579,14 @@ export class Souvenir {
 
   async deleteNode(id: string): Promise<void> {
     await this.repository.deleteNode(id);
+  }
+
+  async getNodesInSession(sessionId: string): Promise<MemoryNode[]> {
+    return this.repository.getNodesInSession(sessionId);
+  }
+
+  getSessionId(): string {
+    return this.sessionId;
   }
 
   // ============ Utility ============
@@ -532,17 +601,21 @@ export class Souvenir {
 
   private cosineSimilarity(a: number[], b: number[]): number {
     if (a.length !== b.length) {
-      throw new Error('Vectors must have same length');
+      throw new Error("Vectors must have same length");
     }
 
     let dotProduct = 0;
     let normA = 0;
     let normB = 0;
 
-    for (let i = 0; i < a.length; i++) {
-      dotProduct += a[i] * b[i];
-      normA += a[i] * a[i];
-      normB += b[i] * b[i];
+    const aEntries = Array.from(a.entries());
+    for (const [i, aVal] of aEntries) {
+      const bVal = b[i];
+      if (bVal === undefined) continue;
+
+      dotProduct += aVal * bVal;
+      normA += aVal * aVal;
+      normB += bVal * bVal;
     }
 
     return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));

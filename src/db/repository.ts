@@ -1,11 +1,11 @@
-import { DatabaseClient } from './client.js';
-import {
+import type {
+  MemoryChunk,
   MemoryNode,
   MemoryRelationship,
   MemorySession,
-  MemoryChunk,
   SearchResult,
-} from '../types.js';
+} from "../types.js";
+import type { DatabaseClient } from "./client.js";
 
 /**
  * Repository for memory operations using postgres package
@@ -19,65 +19,81 @@ export class MemoryRepository {
     content: string,
     embedding: number[] | null,
     nodeType: string,
-    metadata: Record<string, unknown> = {}
+    metadata: Record<string, unknown> = {},
   ): Promise<MemoryNode> {
-    const embeddingArray = embedding ? `[${embedding.join(',')}]` : null;
+    const embeddingArray = embedding ? `[${embedding.join(",")}]` : null;
 
-    const [row] = await this.db.query`
+    const query = this.db.query;
+    const rows = await query`
       INSERT INTO memory_nodes (content, embedding, node_type, metadata)
-      VALUES (${content}, ${embeddingArray}, ${nodeType}, ${metadata})
+      VALUES (${content}, ${embeddingArray}, ${nodeType}, ${JSON.stringify(metadata)})
       RETURNING *
     `;
 
-    return this.mapNode(row);
+    const row = rows[0];
+    if (!row) throw new Error("Failed to create node");
+
+    return this.mapNode(row as Record<string, unknown>);
   }
 
   async getNode(id: string): Promise<MemoryNode | null> {
-    const [row] = await this.db.query`
-      SELECT * FROM memory_nodes WHERE id = ${id}
-    `;
+    try {
+      const [row] = await this.db.query`
+        SELECT * FROM memory_nodes WHERE id = ${id}
+      `;
 
-    return row ? this.mapNode(row) : null;
+      return row ? this.mapNode(row) : null;
+    } catch (_error) {
+      // Handle invalid UUID format gracefully - return null instead of throwing
+      // The postgres library throws when trying to cast invalid UUID
+      return null;
+    }
   }
 
   async updateNode(
-    id: string,
-    updates: Partial<Pick<MemoryNode, 'content' | 'metadata' | 'embedding'>>
-  ): Promise<MemoryNode> {
-    const sets: string[] = [];
-    const values: any[] = [];
+    sessionId: string,
+    nodeId: string,
+    updates: Partial<MemoryNode>,
+  ): Promise<MemoryNode | null> {
+    const setSets: string[] = [];
 
     if (updates.content !== undefined) {
-      sets.push('content');
-      values.push(updates.content);
+      setSets.push(`content = '${updates.content.replace(/'/g, "''")}'`);
     }
-
-    if (updates.metadata !== undefined) {
-      sets.push('metadata');
-      values.push(updates.metadata);
-    }
-
     if (updates.embedding !== undefined) {
-      sets.push('embedding');
-      values.push(updates.embedding ? `[${updates.embedding.join(',')}]` : null);
+      setSets.push(`embedding = '${JSON.stringify(updates.embedding)}'`);
+    }
+    if (updates.metadata !== undefined) {
+      setSets.push(`metadata = '${JSON.stringify(updates.metadata)}'`);
     }
 
-    // Build dynamic update query
-    const updateParts = sets.map((set, i) => `${set} = $${i + 1}`).join(', ');
+    if (setSets.length === 0) {
+      return this.getNode(nodeId);
+    }
 
-    const [row] = await this.db.query(
-      `UPDATE memory_nodes SET ${updateParts} WHERE id = $${sets.length + 1} RETURNING *`,
-      [...values, id]
-    );
-
-    return this.mapNode(row);
+    try {
+      const rows = await this.db.query`
+        UPDATE memory_nodes 
+        SET updated_at = NOW(), ${setSets.join(", ")}
+        WHERE session_id = ${sessionId} AND id = ${nodeId} 
+        RETURNING *
+      `;
+      const row = rows[0];
+      return row ? this.mapNode(row as Record<string, unknown>) : null;
+    } catch (error) {
+      console.error("Error updating node:", error);
+      return null;
+    }
   }
 
   async deleteNode(id: string): Promise<void> {
     await this.db.query`DELETE FROM memory_nodes WHERE id = ${id}`;
   }
 
-  async findNodeByContentAndType(content: string, nodeType: string): Promise<MemoryNode | null> {
+  async findNodeByContentAndType(
+    content: string,
+    nodeType: string,
+  ): Promise<MemoryNode | null> {
     const [row] = await this.db.query`
       SELECT * FROM memory_nodes
       WHERE content = ${content} AND node_type = ${nodeType}
@@ -91,11 +107,11 @@ export class MemoryRepository {
     embedding: number[],
     limit: number = 10,
     minScore: number = 0.7,
-    nodeTypes?: string[]
+    nodeTypes?: string[],
   ): Promise<SearchResult[]> {
-    const embeddingArray = `[${embedding.join(',')}]`;
+    const embeddingArray = `[${embedding.join(",")}]`;
 
-    let rows;
+    let rows: Record<string, unknown>[];
     if (nodeTypes && nodeTypes.length > 0) {
       rows = await this.db.query`
         SELECT *,
@@ -119,9 +135,9 @@ export class MemoryRepository {
       `;
     }
 
-    return rows.map((row: any) => ({
+    return rows.map((row: Record<string, unknown>) => ({
       node: this.mapNode(row),
-      score: parseFloat(row.score),
+      score: parseFloat(row.score as string),
     }));
   }
 
@@ -132,22 +148,24 @@ export class MemoryRepository {
     targetId: string,
     relationshipType: string,
     weight: number = 1.0,
-    metadata: Record<string, unknown> = {}
+    metadata: Record<string, unknown> = {},
   ): Promise<MemoryRelationship> {
-    const [row] = await this.db.query`
+    const rows = await this.db.query`
       INSERT INTO memory_relationships (source_id, target_id, relationship_type, weight, metadata)
-      VALUES (${sourceId}, ${targetId}, ${relationshipType}, ${weight}, ${metadata})
+      VALUES (${sourceId}, ${targetId}, ${relationshipType}, ${weight}, ${JSON.stringify(metadata)})
       RETURNING *
     `;
 
-    return this.mapRelationship(row);
+    const row = rows[0];
+    if (!row) throw new Error("Failed to create relationship");
+    return this.mapRelationship(row as Record<string, unknown>);
   }
 
   async getRelationshipsForNode(
     nodeId: string,
-    types?: string[]
+    types?: string[],
   ): Promise<MemoryRelationship[]> {
-    let rows;
+    let rows: Record<string, unknown>[];
 
     if (types && types.length > 0) {
       rows = await this.db.query`
@@ -162,7 +180,9 @@ export class MemoryRepository {
       `;
     }
 
-    return rows.map((row: any) => this.mapRelationship(row));
+    return rows.map((row: Record<string, unknown>) =>
+      this.mapRelationship(row),
+    );
   }
 
   async deleteRelationship(id: string): Promise<void> {
@@ -173,42 +193,78 @@ export class MemoryRepository {
 
   async createSession(
     sessionName?: string,
-    metadata: Record<string, unknown> = {}
+    metadata: Record<string, unknown> = {},
   ): Promise<MemorySession> {
-    const [row] = await this.db.query`
+    const rows = await this.db.query`
       INSERT INTO memory_sessions (session_name, metadata)
-      VALUES (${sessionName || null}, ${metadata})
+      VALUES (${sessionName || null}, ${JSON.stringify(metadata)})
       RETURNING *
     `;
 
-    return this.mapSession(row);
+    const row = rows[0];
+    if (!row) throw new Error("Failed to create session");
+    return this.mapSession(row as Record<string, unknown>);
   }
 
   async getSession(id: string): Promise<MemorySession | null> {
-    const [row] = await this.db.query`
-      SELECT * FROM memory_sessions WHERE id = ${id}
-    `;
+    try {
+      const [row] = await this.db.query`
+        SELECT * FROM memory_sessions WHERE id = ${id}
+      `;
 
-    return row ? this.mapSession(row) : null;
+      return row ? this.mapSession(row) : null;
+    } catch (_error) {
+      // Handle invalid UUID format gracefully - return null
+      return null;
+    }
   }
 
   async addNodeToSession(sessionId: string, nodeId: string): Promise<void> {
-    await this.db.query`
-      INSERT INTO session_nodes (session_id, node_id)
-      VALUES (${sessionId}, ${nodeId})
-      ON CONFLICT DO NOTHING
-    `;
+    try {
+      await this.db.query`
+        INSERT INTO session_nodes (session_id, node_id)
+        VALUES (${sessionId}, ${nodeId})
+        ON CONFLICT DO NOTHING
+      `;
+    } catch (error) {
+      // If we get a foreign key error, the session might not exist
+      // Try to create it and then insert again
+      if (
+        error instanceof Error &&
+        error.message.includes("session_nodes_session_id_fkey")
+      ) {
+        // Create the session first with the specific sessionId
+        await this.db.query`
+          INSERT INTO memory_sessions (id, metadata)
+          VALUES (${sessionId}, '{}')
+          ON CONFLICT DO NOTHING
+        `;
+        // Try again
+        await this.db.query`
+          INSERT INTO session_nodes (session_id, node_id)
+          VALUES (${sessionId}, ${nodeId})
+          ON CONFLICT DO NOTHING
+        `;
+      } else {
+        throw error;
+      }
+    }
   }
 
   async getNodesInSession(sessionId: string): Promise<MemoryNode[]> {
-    const rows = await this.db.query`
-      SELECT mn.* FROM memory_nodes mn
-      JOIN session_nodes sn ON mn.id = sn.node_id
-      WHERE sn.session_id = ${sessionId}
-      ORDER BY sn.added_at DESC
-    `;
+    try {
+      const rows = await this.db.query`
+        SELECT mn.* FROM memory_nodes mn
+        JOIN session_nodes sn ON mn.id = sn.node_id
+        WHERE sn.session_id = ${sessionId}
+        ORDER BY sn.added_at DESC
+      `;
 
-    return rows.map((row: any) => this.mapNode(row));
+      return rows.map((row: Record<string, unknown>) => this.mapNode(row));
+    } catch {
+      // Handle invalid UUID format gracefully - return empty array
+      return [];
+    }
   }
 
   // ============ Memory Chunks ============
@@ -217,19 +273,24 @@ export class MemoryRepository {
     content: string,
     chunkIndex: number,
     sourceIdentifier?: string,
-    metadata: Record<string, unknown> = {}
+    metadata: Record<string, unknown> = {},
   ): Promise<MemoryChunk> {
-    const [row] = await this.db.query`
+    const rows = await this.db.query`
       INSERT INTO memory_chunks (content, chunk_index, source_identifier, metadata)
-      VALUES (${content}, ${chunkIndex}, ${sourceIdentifier || null}, ${metadata})
+      VALUES (${content}, ${chunkIndex}, ${sourceIdentifier || null}, ${JSON.stringify(metadata)})
       RETURNING *
     `;
 
-    return this.mapChunk(row);
+    const row = rows[0];
+    if (!row) throw new Error("Failed to create chunk");
+    return this.mapChunk(row as Record<string, unknown>);
   }
 
-  async getUnprocessedChunks(sessionId?: string, limit: number = 100): Promise<MemoryChunk[]> {
-    let rows;
+  async getUnprocessedChunks(
+    sessionId?: string,
+    limit: number = 100,
+  ): Promise<MemoryChunk[]> {
+    let rows: Record<string, unknown>[];
 
     if (sessionId) {
       // Filter by sessionId stored in chunk metadata
@@ -250,58 +311,59 @@ export class MemoryRepository {
       `;
     }
 
-    return rows.map((row: any) => this.mapChunk(row));
+    return rows.map((row: Record<string, unknown>) => this.mapChunk(row));
   }
 
   async markChunkProcessed(id: string): Promise<void> {
-    await this.db.query`UPDATE memory_chunks SET processed = TRUE WHERE id = ${id}`;
+    await this.db
+      .query`UPDATE memory_chunks SET processed = TRUE WHERE id = ${id}`;
   }
 
   // ============ Mappers ============
 
-  private mapNode(row: any): MemoryNode {
+  private mapNode(row: Record<string, unknown>): MemoryNode {
     return {
-      id: row.id,
-      content: row.content,
-      embedding: row.embedding,
-      metadata: row.metadata || {},
-      nodeType: row.node_type,
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
+      id: row.id as string,
+      content: row.content as string,
+      embedding: (row.embedding as number[] | null) || undefined,
+      metadata: (row.metadata as Record<string, unknown>) || {},
+      nodeType: row.node_type as string,
+      createdAt: new Date(row.created_at as string),
+      updatedAt: new Date(row.updated_at as string),
     };
   }
 
-  private mapRelationship(row: any): MemoryRelationship {
+  private mapRelationship(row: Record<string, unknown>): MemoryRelationship {
     return {
-      id: row.id,
-      sourceId: row.source_id,
-      targetId: row.target_id,
-      relationshipType: row.relationship_type,
-      weight: parseFloat(row.weight),
-      metadata: row.metadata || {},
-      createdAt: new Date(row.created_at),
+      id: row.id as string,
+      sourceId: row.source_id as string,
+      targetId: row.target_id as string,
+      relationshipType: row.relationship_type as string,
+      weight: parseFloat(row.weight as string),
+      metadata: (row.metadata as Record<string, unknown>) || {},
+      createdAt: new Date(row.created_at as string),
     };
   }
 
-  private mapSession(row: any): MemorySession {
+  private mapSession(row: Record<string, unknown>): MemorySession {
     return {
-      id: row.id,
-      sessionName: row.session_name,
-      metadata: row.metadata || {},
-      createdAt: new Date(row.created_at),
-      updatedAt: new Date(row.updated_at),
+      id: row.id as string,
+      sessionName: (row.session_name as string | null) || undefined,
+      metadata: (row.metadata as Record<string, unknown>) || {},
+      createdAt: new Date(row.created_at as string),
+      updatedAt: new Date(row.updated_at as string),
     };
   }
 
-  private mapChunk(row: any): MemoryChunk {
+  private mapChunk(row: Record<string, unknown>): MemoryChunk {
     return {
-      id: row.id,
-      content: row.content,
-      chunkIndex: row.chunk_index,
-      sourceIdentifier: row.source_identifier,
-      metadata: row.metadata || {},
-      processed: row.processed,
-      createdAt: new Date(row.created_at),
+      id: row.id as string,
+      content: row.content as string,
+      chunkIndex: row.chunk_index as number,
+      sourceIdentifier: (row.source_identifier as string | null) || undefined,
+      metadata: (row.metadata as Record<string, unknown>) || {},
+      processed: row.processed as boolean,
+      createdAt: new Date(row.created_at as string),
     };
   }
 }

@@ -3,11 +3,11 @@ layout: home
 
 hero:
   name: "Souvenir"
-  text: "Long-term memory for AI agents"
+  text: "Long-term memory for agents"
   image:
     src: /souvenir-hero.svg
     alt: Souvenir
-  tagline: Add automatic memory tools to your Vercel AI SDK agents. Build knowledge graphs that remember.
+  tagline: Add automatic memory tools to your Vercel AI SDK agents.<br /> Build knowledge graphs that remember.
   actions:
     - theme: brand
       text: Get Started

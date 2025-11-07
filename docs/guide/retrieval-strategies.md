@@ -332,6 +332,8 @@ Key findings:
 
 ## Next Steps
 
-- [API Reference](/api/souvenir) - Full API documentation
-- [Examples](/examples/retrieval-strategies) - See strategies in action
-- [Configuration](/configuration/) - Tune retrieval parameters
+- [ETL Pipeline](/guide/etl-pipeline) - How data flows
+- [Chunking](/guide/chunking) - Text chunking options
+- [Quick Start](/guide/quick-start) - Get started
+
+````

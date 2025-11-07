@@ -16,8 +16,8 @@ Souvenir provides memory tools for AI agents. When added to your agent, it autom
 Souvenir is designed specifically for agents using the Vercel AI SDK:
 
 ```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
-import { createSouvenirTools } from '@upstart-gg/souvenir/tools';
+import { Souvenir } from '@upstart.gg/souvenir';
+import { createSouvenirTools } from '@upstart.gg/souvenir/tools';
 import { generateText } from 'ai';
 import { openai } from '@ai-sdk/openai';
 
@@ -236,40 +236,8 @@ Key findings implemented:
 
 ## Philosophy
 
-1. **Tools-first** - Agents use memory automatically, not manual API calls
-2. **Research-based** - Built on proven academic techniques
-3. **Knowledge graphs** - Capture relationships, not just similarity
-4. **Multi-strategy** - No single retrieval method is always best
-5. **Production-ready** - PostgreSQL + pgvector for scale
+- **Tools-first** - Agents use memory automatically, not manual API calls
+- **Research-based** - Built on proven academic techniques
+- **Knowledge graphs** - Capture relationships, not just similarity
+- **Multi-strategy** - No single retrieval method is always best
 
-## Getting Started
-
-Ready to give your agent memory?
-
-1. [**Quick Start**](/guide/quick-start) - Add memory to your agent in 5 minutes
-2. [**Installation**](/guide/installation) - Set up database and dependencies
-3. [**Examples**](/examples/vercel-ai-sdk) - See complete working examples
-
----
-
-## What You Won't Do
-
-Unlike other memory systems, you **won't**:
-
-- ❌ Manually call `add()`, `process()`, `search()` methods
-- ❌ Manage chunking and embeddings yourself
-- ❌ Write retrieval logic
-- ❌ Handle entity extraction
-
-The agent does it all automatically using the tools.
-
-## What You Will Do
-
-You **will**:
-
-- ✅ Create a Souvenir instance
-- ✅ Get the tools
-- ✅ Add tools to your agent
-- ✅ Pass `sessionId` for each user
-
-That's it. The rest is automatic.

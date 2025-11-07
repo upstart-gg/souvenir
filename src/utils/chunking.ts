@@ -2,11 +2,15 @@
  * Text chunking utilities using chonkiejs
  */
 
-import { RecursiveChunker, TokenChunker, RecursiveRules } from '@chonkiejs/core';
-import type { RecursiveLevelConfig } from '@chonkiejs/core';
+import type { RecursiveLevelConfig } from "@chonkiejs/core";
+import {
+  RecursiveChunker,
+  RecursiveRules,
+  TokenChunker,
+} from "@chonkiejs/core";
 
 export interface RecursiveChunkOptions {
-  mode: 'recursive';
+  mode: "recursive";
   chunkSize: number;
   tokenizer?: string;
   minCharactersPerChunk?: number;
@@ -14,7 +18,7 @@ export interface RecursiveChunkOptions {
 }
 
 export interface TokenChunkOptions {
-  mode: 'token';
+  mode: "token";
   chunkSize: number;
   chunkOverlap?: number;
   tokenizer?: string;
@@ -31,10 +35,10 @@ export type ChunkOptions = RecursiveChunkOptions | TokenChunkOptions;
  */
 export async function chunkText(
   text: string,
-  options: ChunkOptions
+  options: ChunkOptions,
 ): Promise<string[]> {
   try {
-    if (options.mode === 'recursive') {
+    if (options.mode === "recursive") {
       // Use recursive chunking with hierarchical splitting
       const chunkerConfig: {
         chunkSize: number;
@@ -84,11 +88,14 @@ export async function chunkText(
     }
   } catch (error) {
     // Fallback to simple splitting if chonkiejs fails
-    console.warn('Chonkiejs chunking failed, falling back to simple split:', error);
+    console.warn(
+      "Chonkiejs chunking failed, falling back to simple split:",
+      error,
+    );
     return fallbackChunk(
       text,
       options.chunkSize,
-      options.mode === 'token' ? options.chunkOverlap || 0 : 0
+      options.mode === "token" ? options.chunkOverlap || 0 : 0,
     );
   }
 }
@@ -96,7 +103,11 @@ export async function chunkText(
 /**
  * Fallback chunking method
  */
-function fallbackChunk(text: string, chunkSize: number, overlap: number): string[] {
+function fallbackChunk(
+  text: string,
+  chunkSize: number,
+  overlap: number,
+): string[] {
   const chunks: string[] = [];
   let start = 0;
 

@@ -1,4 +1,4 @@
-import postgres from 'postgres';
+import postgres from "postgres";
 
 /**
  * Database client for Souvenir using the postgres package
@@ -12,24 +12,26 @@ export class DatabaseClient {
       max: 20,
       idle_timeout: 30,
       connect_timeout: 2,
-      onnotice: () => {}, // Silence notices
     });
   }
 
   /**
    * Execute a query - direct access to postgres client
    */
-  get query() {
+  get query(): ReturnType<typeof postgres> {
     return this.sql;
   }
 
   /**
    * Execute queries in a transaction
    */
-  async transaction<T>(callback: (sql: ReturnType<typeof postgres>) => Promise<T>): Promise<T> {
-    return this.sql.begin(async (sql) => {
+  async transaction<T>(
+    callback: (sql: ReturnType<typeof postgres>) => Promise<T>,
+  ): Promise<T> {
+    const result = await this.sql.begin(async (sql) => {
       return callback(sql);
     });
+    return result as T;
   }
 
   /**

@@ -1,16 +1,16 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /**
  * Configuration for Souvenir memory system
  */
-export const SouvenirConfigSchema = z.object({
+export const SouvenirConfigSchema: ReturnType<typeof z.object> = z.object({
   databaseUrl: z.string().url(),
   embeddingDimensions: z.number().default(1536),
   chunkSize: z.number().default(1000),
   chunkOverlap: z.number().default(200),
   minRelevanceScore: z.number().min(0).max(1).default(0.7),
   maxResults: z.number().default(10),
-  chunkingMode: z.enum(['token', 'recursive']).default('token'),
+  chunkingMode: z.enum(["token", "recursive"]).default("recursive"),
   chunkingTokenizer: z.string().optional(),
   minCharactersPerChunk: z.number().optional(),
 });
@@ -89,11 +89,11 @@ export interface AddOptions {
  * Retrieval strategy types (from Cognee paper)
  */
 export type RetrievalStrategy =
-  | 'vector' // Vector-based chunk retrieval
-  | 'graph-neighborhood' // Retrieve graph neighbors
-  | 'graph-completion' // Format graph triplets for LLM
-  | 'graph-summary' // Use graph summaries
-  | 'hybrid'; // Combine multiple strategies
+  | "vector" // Vector-based chunk retrieval
+  | "graph-neighborhood" // Retrieve graph neighbors
+  | "graph-completion" // Format graph triplets for LLM
+  | "graph-summary" // Use graph summaries
+  | "hybrid"; // Combine multiple strategies
 
 /**
  * Options for searching memory
@@ -172,7 +172,7 @@ export interface GraphPath {
  * Formatted context for LLM consumption
  */
 export interface FormattedContext {
-  type: 'text' | 'graph' | 'hybrid';
+  type: "text" | "graph" | "hybrid";
   content: string;
   sources: {
     nodeId: string;
@@ -208,7 +208,7 @@ export interface PromptTemplates {
  * Summary node metadata
  */
 export interface SummaryMetadata {
-  summaryOf: 'chunk' | 'session' | 'subgraph';
+  summaryOf: "chunk" | "session" | "subgraph";
   sourceIds: string[];
   summaryLength: number;
   generatedAt: Date;

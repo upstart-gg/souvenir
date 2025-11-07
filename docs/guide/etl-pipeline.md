@@ -221,7 +221,7 @@ See [Retrieval Strategies](/guide/retrieval-strategies) for details.
 ## Complete Workflow Example
 
 ```typescript
-import { Souvenir } from '@upstart-gg/souvenir';
+import { Souvenir } from '@upstart.gg/souvenir';
 import { openai } from '@ai-sdk/openai';
 import { embed } from 'ai';
 
@@ -333,4 +333,6 @@ await souvenir.processAll({ sessionId }); // Only processes new chunks
 
 - [Retrieval Strategies](/guide/retrieval-strategies) - Learn about search methods
 - [Chunking Configuration](/guide/chunking) - Optimize chunking for your content
-- [Custom Embeddings](/guide/custom-embeddings) - Use different embedding models
+- [Quick Start](/guide/quick-start) - Get started
+
+````

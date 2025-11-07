@@ -1,11 +1,11 @@
-import { generateText } from 'ai';
-import {
+import { generateText } from "ai";
+import type {
   ExtractedEntity,
   ExtractedRelationship,
   MemoryChunk,
-  SouvenirProcessOptions,
   PromptTemplates,
-} from '../types.js';
+  SouvenirProcessOptions,
+} from "../types.js";
 
 /**
  * Default prompt templates (from paper's optimization findings)
@@ -52,8 +52,8 @@ export class SouvenirProcessor {
   private prompts: Required<PromptTemplates>;
 
   constructor(
-    private model: Parameters<typeof generateText>[0]['model'],
-    customPrompts?: Partial<PromptTemplates>
+    private model: Parameters<typeof generateText>[0]["model"],
+    customPrompts?: Partial<PromptTemplates>,
   ) {
     this.prompts = { ...DEFAULT_PROMPTS, ...customPrompts };
   }
@@ -63,22 +63,22 @@ export class SouvenirProcessor {
    */
   async extractEntities(
     content: string,
-    customPrompt?: string
+    customPrompt?: string,
   ): Promise<ExtractedEntity[]> {
     const promptTemplate = customPrompt || this.prompts.entityExtraction;
-    const prompt = promptTemplate.replace('{content}', content);
+    const prompt = promptTemplate.replace("{content}", content);
 
     try {
       const { text } = await generateText({
         model: this.model,
         prompt,
-        maxTokens: 1000,
+        maxOutputTokens: 1000,
       });
 
       const entities = JSON.parse(text);
       return Array.isArray(entities) ? entities : [];
     } catch (error) {
-      console.error('Entity extraction failed:', error);
+      console.error("Entity extraction failed:", error);
       return [];
     }
   }
@@ -89,29 +89,29 @@ export class SouvenirProcessor {
   async extractRelationships(
     content: string,
     entities: ExtractedEntity[],
-    customPrompt?: string
+    customPrompt?: string,
   ): Promise<ExtractedRelationship[]> {
     if (entities.length < 2) {
       return [];
     }
 
-    const entityList = entities.map((e) => e.text).join(', ');
+    const entityList = entities.map((e) => e.text).join(", ");
     const promptTemplate = customPrompt || this.prompts.relationshipExtraction;
     const prompt = promptTemplate
-      .replace('{entities}', entityList)
-      .replace('{content}', content);
+      .replace("{entities}", entityList)
+      .replace("{content}", content);
 
     try {
       const { text } = await generateText({
         model: this.model,
         prompt,
-        maxTokens: 1000,
+        maxOutputTokens: 1000,
       });
 
       const relationships = JSON.parse(text);
       return Array.isArray(relationships) ? relationships : [];
     } catch (error) {
-      console.error('Relationship extraction failed:', error);
+      console.error("Relationship extraction failed:", error);
       return [];
     }
   }
@@ -119,23 +119,26 @@ export class SouvenirProcessor {
   /**
    * Generate a summary of content using configurable prompt
    */
-  async generateSummary(content: string, maxLength: number = 200): Promise<string> {
+  async generateSummary(
+    content: string,
+    maxLength: number = 200,
+  ): Promise<string> {
     const promptTemplate = this.prompts.summarization;
     const prompt = promptTemplate
-      .replace('{maxLength}', maxLength.toString())
-      .replace('{content}', content);
+      .replace("{maxLength}", maxLength.toString())
+      .replace("{content}", content);
 
     try {
       const { text } = await generateText({
         model: this.model,
         prompt,
-        maxTokens: 100,
+        maxOutputTokens: 100,
       });
 
       return text.trim();
     } catch (error) {
-      console.error('Summary generation failed:', error);
-      return content.slice(0, maxLength) + '...';
+      console.error("Summary generation failed:", error);
+      return `${content.slice(0, maxLength)}...`;
     }
   }
 
@@ -145,10 +148,10 @@ export class SouvenirProcessor {
    */
   async generateMultiContentSummary(
     contents: string[],
-    summaryType: 'session' | 'subgraph',
-    maxLength: number = 500
+    summaryType: "session" | "subgraph",
+    maxLength: number = 500,
   ): Promise<string> {
-    const combinedContent = contents.join('\n\n---\n\n');
+    const combinedContent = contents.join("\n\n---\n\n");
 
     const prompt = `Generate a comprehensive summary of the following ${summaryType} content.
 Identify key themes, entities, and relationships. Keep it under ${maxLength} characters.
@@ -162,16 +165,16 @@ Summary:`;
       const { text } = await generateText({
         model: this.model,
         prompt,
-        maxTokens: 200,
+        maxOutputTokens: 200,
       });
 
       return text.trim();
     } catch (error) {
-      console.error('Multi-content summary generation failed:', error);
+      console.error("Multi-content summary generation failed:", error);
       // Fallback: concatenate first parts of each content
       return contents
         .map((c) => c.slice(0, Math.floor(maxLength / contents.length)))
-        .join(' ... ')
+        .join(" ... ")
         .slice(0, maxLength);
     }
   }
@@ -181,7 +184,7 @@ Summary:`;
    */
   async processChunk(
     chunk: MemoryChunk,
-    options: SouvenirProcessOptions = {}
+    options: SouvenirProcessOptions = {},
   ): Promise<{
     entities: ExtractedEntity[];
     relationships: ExtractedRelationship[];
@@ -205,7 +208,7 @@ Summary:`;
       relationships = await this.extractRelationships(
         chunk.content,
         entities,
-        relationshipPrompt
+        relationshipPrompt,
       );
     }
 
