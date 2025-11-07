@@ -294,9 +294,8 @@ describe("Souvenir Tools Integration Tests", () => {
 
           await storeMemory.execute({
             content: "Machine learning is a subset of artificial intelligence",
+            processImmediately: true,
           });
-
-          await souvenir.processAll({ generateEmbeddings: true });
 
           const result = await searchMemory.execute({
             query: "machine learning",
@@ -327,9 +326,8 @@ describe("Souvenir Tools Integration Tests", () => {
 
           await storeMemory.execute({
             content: "Deep learning uses neural networks with multiple layers",
+            processImmediately: true,
           });
-
-          await souvenir.processAll({ generateEmbeddings: true });
 
           const result = await searchMemory.execute({
             query: "deep learning neural networks",
@@ -383,14 +381,14 @@ describe("Souvenir Tools Integration Tests", () => {
           await storeMemory.execute({
             content: "The quantum field theory describes fundamental particles",
             metadata: { category: "physics" },
+            processImmediately: true,
           });
           await storeMemory.execute({
             content:
               "Quantum entanglement is a phenomenon in quantum mechanics",
             metadata: { category: "physics" },
+            processImmediately: true,
           });
-
-          await souvenir.processAll({ generateEmbeddings: true });
 
           const result = await searchMemory.execute({
             query: "quantum physics",
@@ -426,9 +424,8 @@ describe("Souvenir Tools Integration Tests", () => {
               domain: "programming",
               year: 2024,
             },
+            processImmediately: true,
           });
-
-          await souvenir.processAll({ generateEmbeddings: true });
 
           const result = await searchMemory.execute({
             query: "Python programming",
@@ -456,9 +453,8 @@ describe("Souvenir Tools Integration Tests", () => {
 
           await storeMemory.execute({
             content: "Default exploration should be enabled",
+            processImmediately: true,
           });
-
-          await souvenir.processAll({ generateEmbeddings: true });
 
           const result = await searchMemory.execute({
             query: "default",
@@ -492,11 +488,10 @@ describe("Souvenir Tools Integration Tests", () => {
           const storeResult = await storeMemory.execute({
             content: testContent,
             metadata: { location: "China", type: "landmark" },
+            processImmediately: true,
           });
 
           expect(storeResult.success).toBe(true);
-
-          await souvenir.processAll({ generateEmbeddings: true });
 
           const searchResult = await searchMemory.execute({
             query: "Great Wall China",
@@ -532,10 +527,9 @@ describe("Souvenir Tools Integration Tests", () => {
             await storeMemory.execute({
               content: memory,
               metadata: { category: "programming" },
+              processImmediately: true,
             });
           }
-
-          await souvenir.processAll({ generateEmbeddings: true });
 
           const result = await searchMemory.execute({
             query: "JavaScript and TypeScript",
@@ -604,9 +598,8 @@ describe("Souvenir Tools Integration Tests", () => {
           await storeMemory.execute({
             content: "User prefers dark mode for all interfaces",
             metadata: { turn: 1, type: "preference" },
+            processImmediately: true,
           });
-
-          await souvenir.processAll({ generateEmbeddings: true });
 
           // Turn 2: Recall preference
           const recallResult = await searchMemory.execute({
@@ -621,9 +614,8 @@ describe("Souvenir Tools Integration Tests", () => {
           await storeMemory.execute({
             content: "User also prefers sans-serif fonts for readability",
             metadata: { turn: 3, type: "preference" },
+            processImmediately: true,
           });
-
-          await souvenir.processAll({ generateEmbeddings: true });
 
           // Turn 4: Search all preferences. We relax strict success expectation:
           // if no results are found (e.g. embeddings produce low similarity), treat as acceptable and assert context string.
