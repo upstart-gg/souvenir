@@ -48,10 +48,12 @@ class MockEmbeddingProvider implements EmbeddingProvider {
 
 describe("Retrieval Strategies Integration Tests", () => {
   let souvenir: Souvenir;
-  const sessionId = crypto.randomUUID();
+  let sessionId: string;
   const mockEmbedding = new MockEmbeddingProvider();
 
   beforeEach(async () => {
+    // Generate a fresh session for each test to ensure isolation when DB reset is skipped
+    sessionId = crypto.randomUUID();
     souvenir = new Souvenir(
       {
         databaseUrl:

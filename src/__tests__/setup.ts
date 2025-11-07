@@ -245,8 +245,9 @@ export async function withTestDatabase<T>(
   let db: Awaited<ReturnType<typeof getTestDatabase>> | null = null;
 
   try {
-    // Initialize fresh database for this test
-    await resetTestDatabase();
+    // Fast mode by default: do NOT reset schema per test.
+    // Tests rely on per-test unique sessionId for data isolation.
+    // If you need a fully clean schema for a specific test, use withIsolatedDatabase below.
 
     // Get connection and run test
     db = await getTestDatabase();
@@ -264,6 +265,19 @@ export async function withTestDatabase<T>(
       }
     }
   }
+}
+
+/**
+ * Wrapper that enforces a full clean schema per test by running a reset
+ * before executing the test function. Use only when a test truly depends on
+ * a globally empty database state; most tests should use withTestDatabase
+ * with session-scoped isolation for speed.
+ */
+export async function withIsolatedDatabase<T>(
+  testFn: (db: Awaited<ReturnType<typeof getTestDatabase>>) => Promise<T>,
+): Promise<T> {
+  await resetTestDatabase();
+  return withTestDatabase(testFn);
 }
 
 // Bun test setup: Initialize database once before all tests
