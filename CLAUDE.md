@@ -77,11 +77,51 @@ bun run docs:preview
 
 ### ETL Pipeline Design
 
-Souvenir uses an Extract-Transform-Load (ETL) pipeline inspired by data processing systems:
+Souvenir uses an Extract-Transform-Load (ETL) pipeline with **automatic batched processing** for optimal efficiency:
 
 1. **Extract** (`souvenir.add()`) - Chunks and stores raw data as MemoryChunks
-2. **Transform** (`souvenir.processAll()`) - Background processing extracts entities, relationships, and generates embeddings
+2. **Transform** (auto-scheduled) - Debounced background processing batches multiple chunks together to extract entities, relationships, and generate embeddings efficiently
 3. **Load** - Processed data stored as MemoryNodes in the knowledge graph with relationships
+
+#### Auto-Processing Behavior
+
+By default, Souvenir uses **timer-based batching** to optimize LLM API calls and processing efficiency:
+
+- Multiple rapid `add()` calls accumulate unprocessed chunks
+- Processing is automatically scheduled with a configurable delay (default: 1000ms)
+- When the timer expires, all pending chunks are processed in batches
+- Each timer reset extends the delay, allowing more chunks to accumulate
+
+**Configuration Options:**
+```typescript
+const config = {
+  autoProcessing: true,        // Enable/disable auto-processing (default: true)
+  autoProcessDelay: 1000,      // Debounce delay in ms (default: 1000)
+  autoProcessBatchSize: 10,    // Chunks per batch (default: 10)
+  // ... other config
+};
+```
+
+**Force Immediate Processing:**
+```typescript
+// Add memory (processing scheduled automatically)
+await souvenir.add("content");
+
+// Force immediate processing when needed (e.g., before search)
+await souvenir.forceMemoryProcessing({
+  generateEmbeddings: true,
+  generateSummaries: false,
+});
+```
+
+**Using the storeMemory Tool:**
+```typescript
+// Batched processing (default)
+await storeMemory({ content: "information" });
+
+// Immediate processing (e.g., for tests)
+await storeMemory({ content: "information", processImmediately: true });
+```
 
 ### Core Components
 
@@ -89,7 +129,9 @@ Souvenir uses an Extract-Transform-Load (ETL) pipeline inspired by data processi
 Main entry point class that coordinates all operations:
 - Manages database client, repository, and graph operations
 - Provides `add()` method for storing memories (Extract phase)
-- Provides `processAll()` method for background processing (Transform phase)
+- Automatically schedules batched processing via debouncing timer
+- Provides `forceMemoryProcessing()` method to force immediate processing
+- Provides `processAll()` method for manual processing control (Transform phase)
 - Provides `search()` method for retrieval with multiple strategies
 - Session management for context isolation
 
@@ -117,7 +159,7 @@ Knowledge graph traversal operations:
 
 #### Pre-built Tools (src/tools/index.ts)
 Two primary tools for Vercel AI SDK integration:
-- `storeMemory` - Store information with automatic processing
+- `storeMemory` - Store information with automatic batched processing (optional `processImmediately` flag for synchronous processing)
 - `searchMemory` - Search with automatic graph exploration and LLM-formatted results
 
 ### Data Model

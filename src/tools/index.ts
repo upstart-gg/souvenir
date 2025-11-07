@@ -19,6 +19,12 @@ export function createSouvenirTools(souvenir: Souvenir): {
       .record(z.string(), z.unknown())
       .optional()
       .describe("Optional metadata about this memory"),
+    processImmediately: z
+      .boolean()
+      .optional()
+      .describe(
+        "Force immediate processing instead of batched processing (default: false)",
+      ),
   });
 
   const searchMemorySchema = z.object({
@@ -33,25 +39,32 @@ export function createSouvenirTools(souvenir: Souvenir): {
 
   const storeMemoryTool = tool({
     description:
-      "Store information in long-term memory for later recall. Use this to remember important facts, preferences, or context from the conversation.",
+      "Store information in long-term memory for later recall. Use this to remember important facts, preferences, or context from the conversation. Memory processing is batched automatically for efficiency.",
     inputSchema: storeMemorySchema,
     execute: async (params: z.infer<typeof storeMemorySchema>) => {
-      const { content, metadata } = params;
+      const { content, metadata, processImmediately = false } = params;
       const chunkIds = await souvenir.add(content, {
         metadata,
       });
 
-      // Process immediately for tests (synchronous)
-      // In production, you might want to do this in background
-      await souvenir.processAll({
-        generateEmbeddings: true,
-        generateSummaries: true,
-      });
+      // Force immediate processing if requested (e.g., for tests or critical data)
+      if (processImmediately) {
+        await souvenir.forceMemoryProcessing({
+          generateEmbeddings: true,
+          generateSummaries: false,
+        });
+        return {
+          success: true,
+          chunkIds,
+          message: `Stored and processed ${chunkIds.length} chunk(s) immediately`,
+        };
+      }
 
+      // Otherwise, processing will happen automatically via debounced batch processing
       return {
         success: true,
         chunkIds,
-        message: `Stored ${chunkIds.length} chunk(s)`,
+        message: `Stored ${chunkIds.length} chunk(s) (processing scheduled)`,
       };
     },
   });
