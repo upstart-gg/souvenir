@@ -105,20 +105,27 @@ The tools automatically select the best strategy based on the query.
 
 ### 4. Sessions for Multi-User Support
 
-Each user gets their own memory space:
+Each user gets their own Souvenir instance with isolated memory:
 
 ```typescript
+// Each user has their own memory instance
+const aliceMemory = new Souvenir(config, { sessionId: 'user-alice', ...options });
+const bobMemory = new Souvenir(config, { sessionId: 'user-bob', ...options });
+
+const aliceTools = createSouvenirTools(aliceMemory);
+const bobTools = createSouvenirTools(bobMemory);
+
+// Alice's conversation - uses her memory
 await generateText({
   model: openai('gpt-4'),
-  tools,
-  sessionId: 'user-alice', // Alice's memories
+  tools: aliceTools, // Bound to Alice's session
   messages: [...]
 });
 
+// Bob's conversation - uses his memory (completely isolated)
 await generateText({
   model: openai('gpt-4'),
-  tools,
-  sessionId: 'user-bob', // Bob's memories (separate)
+  tools: bobTools, // Bound to Bob's session
   messages: [...]
 });
 ```

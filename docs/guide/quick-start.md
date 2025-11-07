@@ -14,21 +14,23 @@ You just create the tools and add them to your agent. That's it.
 
 ## Setup
 
-### 1. Create Souvenir Instance
+### 1. Create Souvenir Instance (Per User/Session)
 
 ```typescript
 import { Souvenir } from '@upstart-gg/souvenir';
 import { openai } from '@ai-sdk/openai';
 import { embed } from 'ai';
 
+// Create one instance per user/session
 const souvenir = new Souvenir(
   {
     databaseUrl: process.env.DATABASE_URL!,
     embeddingDimensions: 1536,
   },
   {
+    sessionId: 'user-123', // Bind to specific user/session
     embeddingProvider: {
-      generateEmbedding: async (text) => {
+      embed: async (text) => {
         const { embedding } = await embed({
           model: openai.embedding('text-embedding-3-small'),
           value: text,
@@ -40,6 +42,8 @@ const souvenir = new Souvenir(
   }
 );
 ```
+
+**Important**: Create a separate Souvenir instance for each user/session. Each instance is bound to a specific sessionId, ensuring complete data isolation.
 
 ### 2. Create Memory Tools
 
@@ -84,36 +88,39 @@ import { createSouvenirTools } from '@upstart-gg/souvenir/tools';
 import { openai } from '@ai-sdk/openai';
 import { generateText, embed } from 'ai';
 
-// 1. Setup Souvenir
-const souvenir = new Souvenir(
-  {
-    databaseUrl: process.env.DATABASE_URL!,
-    embeddingDimensions: 1536,
-  },
-  {
-    embeddingProvider: {
-      generateEmbedding: async (text) => {
-        const { embedding } = await embed({
-          model: openai.embedding('text-embedding-3-small'),
-          value: text,
-        });
-        return embedding;
-      },
+// Helper to create Souvenir instance for a user
+function createUserMemory(sessionId: string) {
+  return new Souvenir(
+    {
+      databaseUrl: process.env.DATABASE_URL!,
+      embeddingDimensions: 1536,
     },
-    processorModel: openai('gpt-4o-mini'),
-  }
-);
+    {
+      sessionId, // Bind to user session
+      embeddingProvider: {
+        embed: async (text) => {
+          const { embedding } = await embed({
+            model: openai.embedding('text-embedding-3-small'),
+            value: text,
+          });
+          return embedding;
+        },
+      },
+      processorModel: openai('gpt-4o-mini'),
+    }
+  );
+}
 
-// 2. Create tools
-const tools = createSouvenirTools(souvenir);
+// Create memory instance for user
+const bobMemory = createUserMemory('user-bob');
+const bobTools = createSouvenirTools(bobMemory);
 
-// 3. Use in agent
-async function chat(message: string, sessionId: string) {
+// Chat with agent
+async function chat(message: string, tools: any) {
   const result = await generateText({
     model: openai('gpt-4'),
     tools,
     maxSteps: 10,
-    sessionId, // Important: Pass sessionId to track user memories
     messages: [
       {
         role: 'system',
@@ -132,20 +139,32 @@ async function chat(message: string, sessionId: string) {
 // First conversation
 const response1 = await chat(
   "Hi! I'm Bob. I love Italian food and I'm allergic to shellfish.",
-  'user-bob'
+  bobTools
 );
 console.log(response1);
 // Agent stores: name=Bob, loves Italian food, allergic to shellfish
 
-// Later conversation
+// Later conversation (same session)
 const response2 = await chat(
   "Can you recommend a restaurant?",
-  'user-bob'
+  bobTools
 );
 console.log(response2);
 // Agent searches memory, finds preferences, recommends Italian restaurant without shellfish
 
-await souvenir.close();
+await bobMemory.close();
+```
+
+**Multi-User Pattern:**
+```typescript
+// Each user gets their own isolated memory
+const aliceMemory = createUserMemory('user-alice');
+const bobMemory = createUserMemory('user-bob');
+
+const aliceTools = createSouvenirTools(aliceMemory);
+const bobTools = createSouvenirTools(bobMemory);
+
+// Complete data isolation - Alice and Bob can't access each other's memories
 ```
 
 ## How It Works
