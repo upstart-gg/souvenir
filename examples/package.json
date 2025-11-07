@@ -1,0 +1,16 @@
+{
+  "name": "souvenir-examples",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "basic": "bun run basic-usage.ts",
+    "tools": "bun run with-tools.ts",
+    "graph": "bun run knowledge-graph.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.0.0",
+    "@upstart.gg/souvenir": "workspace:*",
+    "ai": "^4.0.0"
+  }
+}
