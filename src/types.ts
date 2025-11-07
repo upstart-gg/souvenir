@@ -82,7 +82,6 @@ export interface SearchResult {
 export interface AddOptions {
   sourceIdentifier?: string;
   metadata?: Record<string, unknown>;
-  sessionId?: string;
   nodeType?: string;
 }
 
@@ -119,7 +118,6 @@ export interface SouvenirProcessOptions {
   extractRelationships?: boolean;
   generateEmbeddings?: boolean;
   generateSummaries?: boolean; // Generate summary nodes (per paper)
-  sessionId?: string;
   entityPrompt?: string; // Configurable prompt for entity extraction
   relationshipPrompt?: string; // Configurable prompt for relationship extraction
 }

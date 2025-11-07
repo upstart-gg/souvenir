@@ -19,22 +19,19 @@ export function createSouvenirTools(souvenir: Souvenir) {
         'Store information in long-term memory for later recall. Use this to remember important facts, preferences, or context from the conversation.',
       parameters: z.object({
         content: z.string().describe('The information to store in memory'),
-        sessionId: z.string().optional().describe('Optional session ID to group related memories'),
         metadata: z
           .record(z.unknown())
           .optional()
           .describe('Optional metadata about this memory'),
       }),
-      execute: async ({ content, sessionId, metadata }) => {
+      execute: async ({ content, metadata }) => {
         const chunkIds = await souvenir.add(content, {
-          sessionId,
           metadata,
         });
 
         // Process in background (non-blocking for better UX)
         // Agent doesn't wait for entity extraction, embeddings, etc.
         souvenir.processAll({
-          sessionId,
           generateEmbeddings: true,
           generateSummaries: true,
         }).catch((error) => {
@@ -57,19 +54,14 @@ export function createSouvenirTools(souvenir: Souvenir) {
         'Search long-term memory for relevant information using semantic similarity. Use this when you need to recall facts, preferences, or past context.',
       parameters: z.object({
         query: z.string().describe('What to search for in memory'),
-        sessionId: z
-          .string()
-          .optional()
-          .describe('Optional session ID to limit search to specific context'),
         limit: z.number().optional().describe('Maximum number of results to return (default: 5)'),
         strategy: z
           .enum(['vector', 'graph-neighborhood', 'graph-completion', 'graph-summary', 'hybrid'])
           .optional()
           .describe('Retrieval strategy (default: vector)'),
       }),
-      execute: async ({ query, sessionId, limit = 5, strategy = 'vector' }) => {
+      execute: async ({ query, limit = 5, strategy = 'vector' }) => {
         const results = await souvenir.search(query, {
-          sessionId,
           limit,
           strategy,
           includeRelationships: true,

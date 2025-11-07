@@ -41,15 +41,18 @@ export class Souvenir {
   private processor?: SouvenirProcessor;
   private embedding?: EmbeddingProvider;
   private embeddingValidated: boolean = false;
+  private sessionId: string;
 
   constructor(
     private config: SouvenirConfig,
-    options?: {
+    options: {
+      sessionId: string;
       embeddingProvider?: EmbeddingProvider;
       processorModel?: Parameters<typeof import('ai').generateText>[0]['model'];
       promptTemplates?: Partial<PromptTemplates>;
     }
   ) {
+    this.sessionId = options.sessionId;
     this.db = new DatabaseClient(config.databaseUrl);
     this.repository = new MemoryRepository(this.db);
     this.graph = new GraphOperations(this.repository);
@@ -111,7 +114,7 @@ export class Souvenir {
    * Chunks the data and stores it for later processing
    */
   async add(data: string, options: AddOptions = {}): Promise<string[]> {
-    const { sourceIdentifier, metadata = {}, sessionId } = options;
+    const { sourceIdentifier, metadata = {} } = options;
 
     // Chunk the data
     const chunks = await chunkText(
@@ -136,7 +139,7 @@ export class Souvenir {
     // Store sessionId in metadata for filtering during processing
     const chunkMetadata = {
       ...metadata,
-      ...(sessionId && { sessionId }),
+      sessionId: this.sessionId,
     };
 
     // Store chunks
@@ -159,9 +162,9 @@ export class Souvenir {
    * Optionally generates summary nodes (per paper)
    */
   async processAll(options: SouvenirProcessOptions = {}): Promise<void> {
-    const { generateEmbeddings = true, generateSummaries = false, sessionId } = options;
+    const { generateEmbeddings = true, generateSummaries = false } = options;
 
-    const chunks = await this.repository.getUnprocessedChunks(sessionId);
+    const chunks = await this.repository.getUnprocessedChunks(this.sessionId);
 
     if (chunks.length === 0) {
       return;
@@ -180,14 +183,14 @@ export class Souvenir {
       processedNodeIds.push(...results.filter((id) => id !== null) as string[]);
     }
 
-    // If session provided, create relationships between nodes in session
-    if (sessionId && this.processor) {
-      await this.createSessionRelationships(sessionId);
+    // Create relationships between nodes in session
+    if (this.processor) {
+      await this.createSessionRelationships(this.sessionId);
     }
 
     // Generate session summary if requested (per paper)
-    if (generateSummaries && sessionId && this.processor && processedNodeIds.length > 0) {
-      await this.generateSessionSummary(sessionId, processedNodeIds);
+    if (generateSummaries && this.processor && processedNodeIds.length > 0) {
+      await this.generateSessionSummary(this.sessionId, processedNodeIds);
     }
   }
 
@@ -200,7 +203,7 @@ export class Souvenir {
       : never,
     options: SouvenirProcessOptions & { generateEmbeddings?: boolean }
   ): Promise<string | null> {
-    const { sessionId, generateEmbeddings = true } = options;
+    const { generateEmbeddings = true } = options;
 
     // Validate embedding dimensions on first use
     if (generateEmbeddings && this.embedding) {
@@ -225,10 +228,8 @@ export class Souvenir {
       }
     );
 
-    // Add to session if provided
-    if (sessionId) {
-      await this.repository.addNodeToSession(sessionId, chunkNode.id);
-    }
+    // Add to session
+    await this.repository.addNodeToSession(this.sessionId, chunkNode.id);
 
     // Extract entities and relationships if processor available
     if (this.processor) {
@@ -266,9 +267,8 @@ export class Souvenir {
             {}
           );
 
-          if (sessionId) {
-            await this.repository.addNodeToSession(sessionId, node.id);
-          }
+          // Add entity to session
+          await this.repository.addNodeToSession(this.sessionId, node.id);
 
           return node;
         })
@@ -399,15 +399,18 @@ export class Souvenir {
     const strategy = options.strategy || 'vector';
     const formatForLLM = options.formatForLLM || false;
 
+    // Add sessionId to options
+    const searchOptions = { ...options, sessionId: this.sessionId };
+
     // Use appropriate retrieval strategy
     switch (strategy) {
       case 'vector':
-        return this.retrieval.vectorRetrieval(query, options);
+        return this.retrieval.vectorRetrieval(query, searchOptions);
 
       case 'graph-neighborhood':
         const neighborhoodResults = await this.retrieval.graphNeighborhoodRetrieval(
           query,
-          options
+          searchOptions
         );
         // Convert GraphRetrievalResult to SearchResult for backward compatibility
         return neighborhoodResults.map((gr) => ({
@@ -417,7 +420,7 @@ export class Souvenir {
         }));
 
       case 'graph-completion':
-        const completionResults = await this.retrieval.graphCompletionRetrieval(query, options);
+        const completionResults = await this.retrieval.graphCompletionRetrieval(query, searchOptions);
         return completionResults.map((gr) => ({
           node: gr.node,
           score: gr.score,
@@ -427,7 +430,7 @@ export class Souvenir {
       case 'graph-summary':
         const summaryResults = await this.retrieval.graphSummaryCompletionRetrieval(
           query,
-          options
+          searchOptions
         );
         return summaryResults.map((gr) => ({
           node: gr.node,
@@ -436,7 +439,7 @@ export class Souvenir {
         }));
 
       case 'hybrid':
-        const hybridResults = await this.retrieval.hybridRetrieval(query, options);
+        const hybridResults = await this.retrieval.hybridRetrieval(query, searchOptions);
         // Combine and deduplicate
         const allResults = [...hybridResults.vectorResults];
         const seenIds = new Set(allResults.map((r) => r.node.id));
@@ -462,7 +465,8 @@ export class Souvenir {
    * Optimized for LLM consumption (per paper)
    */
   async searchGraph(query: string, options: SearchOptions = {}): Promise<FormattedContext> {
-    const results = await this.retrieval.graphCompletionRetrieval(query, options);
+    const searchOptions = { ...options, sessionId: this.sessionId };
+    const results = await this.retrieval.graphCompletionRetrieval(query, searchOptions);
     return formatGraphRetrievalForLLM(results);
   }
 
@@ -470,7 +474,8 @@ export class Souvenir {
    * Search with hybrid strategy and get formatted context
    */
   async searchHybrid(query: string, options: SearchOptions = {}): Promise<FormattedContext> {
-    const { vectorResults, graphResults } = await this.retrieval.hybridRetrieval(query, options);
+    const searchOptions = { ...options, sessionId: this.sessionId };
+    const { vectorResults, graphResults } = await this.retrieval.hybridRetrieval(query, searchOptions);
     return formatHybridContextForLLM(vectorResults, graphResults);
   }
 
