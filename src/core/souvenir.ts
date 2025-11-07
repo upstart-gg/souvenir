@@ -40,6 +40,7 @@ export class Souvenir {
   private retrieval: RetrievalStrategies;
   private processor?: SouvenirProcessor;
   private embedding?: EmbeddingProvider;
+  private embeddingValidated: boolean = false;
 
   constructor(
     private config: SouvenirConfig,
@@ -72,6 +73,37 @@ export class Souvenir {
     );
   }
 
+  /**
+   * Validate that embedding dimensions match configuration
+   * Throws error if dimensions don't match
+   */
+  private async validateEmbeddingDimensions(): Promise<void> {
+    if (!this.embedding || this.embeddingValidated) {
+      return;
+    }
+
+    try {
+      // Generate a test embedding
+      const testEmbedding = await this.embedding.embed('test');
+
+      // Check if dimensions match
+      if (testEmbedding.length !== this.config.embeddingDimensions) {
+        throw new Error(
+          `Embedding dimension mismatch: expected ${this.config.embeddingDimensions}, but got ${testEmbedding.length}. ` +
+          `Please update your SouvenirConfig.embeddingDimensions to match your embedding model's output dimensions.`
+        );
+      }
+
+      this.embeddingValidated = true;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('dimension mismatch')) {
+        throw error;
+      }
+      // If embedding generation failed for another reason, log warning but don't fail
+      console.warn('Could not validate embedding dimensions:', error);
+    }
+  }
+
   // ============ Core API ============
 
   /**
@@ -101,13 +133,19 @@ export class Souvenir {
 
     const chunkIds: string[] = [];
 
+    // Store sessionId in metadata for filtering during processing
+    const chunkMetadata = {
+      ...metadata,
+      ...(sessionId && { sessionId }),
+    };
+
     // Store chunks
     for (let i = 0; i < chunks.length; i++) {
       const chunk = await this.repository.createChunk(
         chunks[i],
         i,
         sourceIdentifier,
-        metadata
+        chunkMetadata
       );
       chunkIds.push(chunk.id);
     }
@@ -123,7 +161,7 @@ export class Souvenir {
   async processAll(options: SouvenirProcessOptions = {}): Promise<void> {
     const { generateEmbeddings = true, generateSummaries = false, sessionId } = options;
 
-    const chunks = await this.repository.getUnprocessedChunks();
+    const chunks = await this.repository.getUnprocessedChunks(sessionId);
 
     if (chunks.length === 0) {
       return;
@@ -164,6 +202,11 @@ export class Souvenir {
   ): Promise<string | null> {
     const { sessionId, generateEmbeddings = true } = options;
 
+    // Validate embedding dimensions on first use
+    if (generateEmbeddings && this.embedding) {
+      await this.validateEmbeddingDimensions();
+    }
+
     // Generate embedding for the chunk
     let embedding: number[] | null = null;
     if (generateEmbeddings && this.embedding) {
@@ -194,21 +237,27 @@ export class Souvenir {
         options
       );
 
-      // Create nodes for entities
+      // Create nodes for entities (with deduplication)
       const entityNodes = await Promise.all(
         entities.map(async (entity) => {
-          const entityEmbedding = generateEmbeddings && this.embedding
-            ? await this.embedding.embed(entity.text)
-            : null;
+          // Check if entity already exists (deduplication)
+          let node = await this.repository.findNodeByContentAndType(entity.text, entity.type);
 
-          const node = await this.repository.createNode(
-            entity.text,
-            entityEmbedding,
-            entity.type,
-            { ...entity.metadata, extractedFrom: chunk.id }
-          );
+          if (!node) {
+            // Entity doesn't exist, create it
+            const entityEmbedding = generateEmbeddings && this.embedding
+              ? await this.embedding.embed(entity.text)
+              : null;
 
-          // Connect entity to chunk
+            node = await this.repository.createNode(
+              entity.text,
+              entityEmbedding,
+              entity.type,
+              { ...entity.metadata, extractedFrom: chunk.id }
+            );
+          }
+
+          // Connect entity to chunk (even if entity existed before)
           await this.repository.createRelationship(
             chunkNode.id,
             node.id,

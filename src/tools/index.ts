@@ -7,6 +7,47 @@ import { z } from 'zod';
 import type { Souvenir } from '../core/souvenir.js';
 
 /**
+ * Trivial phrases that shouldn't be stored in long-term memory
+ */
+const TRIVIAL_PHRASES = new Set([
+  'ok',
+  'okay',
+  'yes',
+  'no',
+  'thanks',
+  'thank you',
+  'bye',
+  'goodbye',
+  'hello',
+  'hi',
+  'hey',
+  'sure',
+  'alright',
+  'got it',
+  'understood',
+  'k',
+]);
+
+/**
+ * Check if content is too trivial to store
+ */
+function isTrivialContent(content: string): boolean {
+  const normalized = content.toLowerCase().trim();
+
+  // Check against trivial phrases
+  if (TRIVIAL_PHRASES.has(normalized)) {
+    return true;
+  }
+
+  // Check if it's just punctuation or very short
+  if (normalized.replace(/[^a-z0-9]/g, '').length < 3) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * Create memory tools for use with Vercel AI SDK
  */
 export function createSouvenirTools(souvenir: Souvenir) {
@@ -26,22 +67,33 @@ export function createSouvenirTools(souvenir: Souvenir) {
           .describe('Optional metadata about this memory'),
       }),
       execute: async ({ content, sessionId, metadata }) => {
+        // Filter trivial content before storing
+        if (content.length < 20 || isTrivialContent(content)) {
+          return {
+            success: false,
+            message: 'Content too trivial to store in long-term memory',
+          };
+        }
+
         const chunkIds = await souvenir.add(content, {
           sessionId,
           metadata,
         });
 
-        // Process the chunks immediately with summaries (per paper)
-        await souvenir.processAll({
+        // Process in background (non-blocking for better UX)
+        // Agent doesn't wait for entity extraction, embeddings, etc.
+        souvenir.processAll({
           sessionId,
           generateEmbeddings: true,
           generateSummaries: true,
+        }).catch((error) => {
+          console.error('Background processing error:', error);
         });
 
         return {
           success: true,
           chunkIds,
-          message: `Stored ${chunkIds.length} memory chunk(s) with summaries`,
+          message: `Stored ${chunkIds.length} chunk(s), processing in background`,
         };
       },
     }),
@@ -100,7 +152,7 @@ export function createSouvenirTools(souvenir: Souvenir) {
         sessionId: z.string().optional().describe('Optional session ID'),
         limit: z.number().optional().describe('Number of graph neighborhoods to return'),
       }),
-      execute: async ({ query, sessionId, limit = 3 }) => {
+      execute: async ({ query, sessionId, limit = 5 }) => {
         const formattedContext = await souvenir.searchGraph(query, {
           sessionId,
           limit,

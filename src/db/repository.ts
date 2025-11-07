@@ -77,6 +77,16 @@ export class MemoryRepository {
     await this.db.query`DELETE FROM memory_nodes WHERE id = ${id}`;
   }
 
+  async findNodeByContentAndType(content: string, nodeType: string): Promise<MemoryNode | null> {
+    const [row] = await this.db.query`
+      SELECT * FROM memory_nodes
+      WHERE content = ${content} AND node_type = ${nodeType}
+      LIMIT 1
+    `;
+
+    return row ? this.mapNode(row) : null;
+  }
+
   async searchByVector(
     embedding: number[],
     limit: number = 10,
@@ -218,13 +228,27 @@ export class MemoryRepository {
     return this.mapChunk(row);
   }
 
-  async getUnprocessedChunks(limit: number = 100): Promise<MemoryChunk[]> {
-    const rows = await this.db.query`
-      SELECT * FROM memory_chunks
-      WHERE processed = FALSE
-      ORDER BY created_at ASC
-      LIMIT ${limit}
-    `;
+  async getUnprocessedChunks(sessionId?: string, limit: number = 100): Promise<MemoryChunk[]> {
+    let rows;
+
+    if (sessionId) {
+      // Filter by sessionId stored in chunk metadata
+      rows = await this.db.query`
+        SELECT * FROM memory_chunks
+        WHERE processed = FALSE
+          AND metadata->>'sessionId' = ${sessionId}
+        ORDER BY created_at ASC
+        LIMIT ${limit}
+      `;
+    } else {
+      // Get all unprocessed chunks
+      rows = await this.db.query`
+        SELECT * FROM memory_chunks
+        WHERE processed = FALSE
+        ORDER BY created_at ASC
+        LIMIT ${limit}
+      `;
+    }
 
     return rows.map((row: any) => this.mapChunk(row));
   }
