@@ -17,6 +17,8 @@ const souvenir = new Souvenir(
     embeddingDimensions: 1536,
     chunkSize: 1000,
     chunkOverlap: 200,
+    // Note: Uses 'token' chunking mode by default - perfect for most agents
+    // See the Chunking guide to learn about 'recursive' mode for documents
   },
   {
     embeddingProvider: {
@@ -32,6 +34,10 @@ const souvenir = new Souvenir(
   }
 );
 ```
+
+::: tip Chunking Strategy
+Souvenir uses **token chunking** by default, which is ideal for conversational memory. If you're building a documentation assistant or processing structured content, consider using **recursive chunking** instead. [Learn more about chunking strategies →](/guide/chunking)
+:::
 
 ## Step 1: Add Memory (Extract)
 
