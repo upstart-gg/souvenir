@@ -162,16 +162,12 @@ export class Souvenir {
         sourceIdentifier,
         chunkMetadata,
       );
-      console.log(
-        `[DEBUG add] Created chunk ${createdChunk.id.substring(0, 8)}, sessionId in metadata: ${chunkMetadata.sessionId?.toString().substring(0, 8)}`,
-      );
+      // Debug logging removed
       chunkIds.push(createdChunk.id);
       i++;
     }
 
-    console.log(
-      `[DEBUG add] Created ${chunkIds.length} chunks for sessionId ${this.sessionId.substring(0, 8)}`,
-    );
+    // Debug logging removed
 
     return chunkIds;
   }
@@ -186,9 +182,7 @@ export class Souvenir {
 
     const chunks = await this.repository.getUnprocessedChunks(this.sessionId);
 
-    console.log(
-      `[DEBUG processAll] SessionId: ${this.sessionId.substring(0, 8)}, Unprocessed chunks: ${chunks.length}, GenerateEmbeddings: ${generateEmbeddings}`,
-    );
+    // Debug logging removed
 
     if (chunks.length === 0) {
       return;
@@ -242,13 +236,9 @@ export class Souvenir {
     let embedding: number[] | null = null;
     if (generateEmbeddings && this.embedding) {
       embedding = await this.embedding.embed(chunk.content);
-      console.log(
-        `[DEBUG processChunk] Generated embedding for chunk ${chunk.id.substring(0, 8)}, dimensions: ${embedding.length}, first value: ${embedding[0]?.toFixed(4)}`,
-      );
+      // Debug logging removed
     } else {
-      console.log(
-        `[DEBUG processChunk] Skipping embedding generation. generateEmbeddings: ${generateEmbeddings}, has embeddingProvider: ${!!this.embedding}`,
-      );
+      // Debug logging removed
     }
 
     // Create memory node for the chunk itself
@@ -458,9 +448,7 @@ export class Souvenir {
         options.minScore ?? (this.config["minRelevanceScore"] as number),
     };
 
-    console.log(
-      `[DEBUG search] Query: "${query}", Strategy: ${strategy}, SessionId: ${this.sessionId.substring(0, 8)}, MinScore: ${searchOptions.minScore}`,
-    );
+    // Debug logging removed
 
     // Use appropriate retrieval strategy
     switch (strategy) {

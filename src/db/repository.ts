@@ -23,9 +23,7 @@ export class MemoryRepository {
   ): Promise<MemoryNode> {
     const embeddingArray = embedding ? `[${embedding.join(",")}]` : null;
 
-    console.log(
-      `[DEBUG createNode] Creating node type: ${nodeType}, has embedding: ${!!embedding}, content preview: "${content.substring(0, 50)}..."`,
-    );
+    // Debug logging removed
 
     const query = this.db.query;
     const rows = await query`
@@ -38,9 +36,7 @@ export class MemoryRepository {
     if (!row) throw new Error("Failed to create node");
 
     const createdNode = this.mapNode(row as Record<string, unknown>);
-    console.log(
-      `[DEBUG createNode] Created node ${createdNode.id.substring(0, 8)}, embedding in DB: ${!!createdNode.embedding}`,
-    );
+    // Debug logging removed
 
     return createdNode;
   }
@@ -65,7 +61,6 @@ export class MemoryRepository {
     updates: Partial<MemoryNode>,
   ): Promise<MemoryNode | null> {
     const setSets: string[] = [];
-
     if (updates.content !== undefined) {
       setSets.push(`content = '${updates.content.replace(/'/g, "''")}'`);
     }
@@ -119,14 +114,7 @@ export class MemoryRepository {
     nodeTypes?: string[],
   ): Promise<SearchResult[]> {
     const embeddingArray = `[${embedding.join(",")}]`;
-
-    // Debug: check total nodes with embeddings
-    const countRows = await this.db
-      .query`SELECT COUNT(*) as count FROM memory_nodes WHERE embedding IS NOT NULL`;
-    const totalWithEmbeddings = countRows[0] ? Number(countRows[0].count) : 0;
-    console.log(
-      `[DEBUG searchByVector] Total nodes with embeddings: ${totalWithEmbeddings}, MinScore: ${minScore}`,
-    );
+    // Debug metrics removed
 
     let rows: Record<string, unknown>[];
     if (nodeTypes && nodeTypes.length > 0) {
@@ -315,22 +303,10 @@ export class MemoryRepository {
 
     if (sessionId) {
       // Filter by sessionId stored in chunk metadata
-      console.log(
-        `[DEBUG getUnprocessedChunks] Looking for sessionId: ${sessionId.substring(0, 8)}`,
-      );
+      // Debug logging removed
 
       // First, check ALL unprocessed chunks to see what's in the database
-      const allRows = await this.db
-        .query`SELECT * FROM memory_chunks WHERE processed = FALSE`;
-      console.log(
-        `[DEBUG getUnprocessedChunks] Total unprocessed chunks in DB: ${allRows.length}`,
-      );
-      if (allRows.length > 0 && allRows[0]) {
-        const metadata = allRows[0].metadata as Record<string, unknown>;
-        console.log(
-          `[DEBUG getUnprocessedChunks] First chunk metadata: ${JSON.stringify(metadata)}`,
-        );
-      }
+      // Removed unused variable for clarity
 
       rows = await this.db.query`
         SELECT * FROM memory_chunks
@@ -339,15 +315,7 @@ export class MemoryRepository {
         ORDER BY created_at ASC
         LIMIT ${limit}
       `;
-      console.log(
-        `[DEBUG getUnprocessedChunks] Found ${rows.length} unprocessed chunks matching sessionId`,
-      );
-      if (rows.length > 0 && rows[0]) {
-        const metadata = rows[0].metadata as Record<string, unknown>;
-        console.log(
-          `[DEBUG getUnprocessedChunks] First chunk metadata sessionId: ${metadata?.sessionId}`,
-        );
-      }
+      // Debug logging removed
     } else {
       // Get all unprocessed chunks
       rows = await this.db.query`

@@ -12,7 +12,7 @@ describe("chunking", () => {
       });
 
       expect(chunks.length).toBeGreaterThan(1);
-      expect(chunks[0].length).toBeLessThanOrEqual(500);
+      expect(chunks[0]?.length).toBeLessThanOrEqual(500);
     });
 
     test("should create overlapping chunks", async () => {

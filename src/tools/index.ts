@@ -74,15 +74,6 @@ export function createSouvenirTools(souvenir: Souvenir): {
         includeRelationships: explore,
       });
 
-      console.log(
-        `[DEBUG searchMemory] Query: "${query}", Results: ${vectorResults.length}`,
-      );
-      if (vectorResults.length > 0 && vectorResults[0]) {
-        console.log(
-          `[DEBUG searchMemory] First result score: ${vectorResults[0].score}`,
-        );
-      }
-
       if (vectorResults.length === 0) {
         return {
           success: false,

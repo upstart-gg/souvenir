@@ -60,21 +60,15 @@ export class RetrievalStrategies {
       nodeTypes,
     );
 
-    console.log(
-      `[DEBUG vectorRetrieval] Query: "${query}", Initial results: ${results.length}, MinScore: ${minScore}`,
-    );
+    // Debug logging removed
 
     // Filter by session if provided
     if (sessionId) {
       const sessionNodes = await this.repository.getNodesInSession(sessionId);
       const sessionNodeIds = new Set(sessionNodes.map((n) => n.id));
-      console.log(
-        `[DEBUG vectorRetrieval] SessionId: ${sessionId.substring(0, 8)}, Session nodes: ${sessionNodes.length}`,
-      );
+      // Debug logging removed
       results = results.filter((r) => sessionNodeIds.has(r.node.id));
-      console.log(
-        `[DEBUG vectorRetrieval] After session filter: ${results.length} results`,
-      );
+      // Debug logging removed
     }
 
     // Limit results
