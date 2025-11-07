@@ -64,6 +64,7 @@ describe("Retrieval Strategies Integration Tests", () => {
         chunkingMode: "recursive",
         chunkOverlap: 50,
         minCharactersPerChunk: 100,
+        autoProcessing: false, // Disable auto-processing for deterministic tests
       },
       {
         sessionId,

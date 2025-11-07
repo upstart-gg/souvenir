@@ -113,6 +113,7 @@ function createTestSouvenir(databaseUrl: string): {
       chunkOverlap: 50,
       minCharactersPerChunk: 100,
       minRelevanceScore: 0.01, // Very low threshold for mock embeddings
+      autoProcessing: false, // Disable auto-processing for deterministic tests
     },
     {
       sessionId: crypto.randomUUID(),
