@@ -49,10 +49,9 @@ import { createSouvenirTools } from '@upstart-gg/souvenir/tools';
 const tools = createSouvenirTools(souvenir);
 ```
 
-That's it! You now have 3 tools:
+That's it! You now have 2 tools:
 - `storeMemory` - Store important information
-- `searchMemory` - Search past memories
-- `searchGraph` - Traverse the knowledge graph
+- `searchMemory` - Search past memories (with configurable retrieval strategies)
 
 ### 3. Use in Your Agent
 
@@ -158,7 +157,7 @@ When your agent runs:
 1. **Agent receives user message**
 2. **Agent decides** whether to:
    - Store new information → calls `storeMemory` tool
-   - Retrieve past information → calls `searchMemory` or `searchGraph` tool
+   - Retrieve past information → calls `searchMemory` tool (with optional strategy parameter)
 3. **Souvenir processes** the information:
    - Chunks text
    - Extracts entities and relationships

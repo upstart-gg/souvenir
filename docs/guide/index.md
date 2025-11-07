@@ -61,7 +61,7 @@ Later:
 "Where do I work?"
 
 // Agent automatically:
-// → Calls searchMemory or searchGraph tool
+// → Calls searchMemory tool
 // → Finds: Alice works_at Acme Corp
 // → Responds: "You work at Acme Corp"
 ```

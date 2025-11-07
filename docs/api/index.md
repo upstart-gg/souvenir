@@ -18,15 +18,14 @@ const tools = createSouvenirTools(souvenir);
 // Use in your agent
 await generateText({
   model: openai('gpt-4'),
-  tools, // Provides: storeMemory, searchMemory, searchGraph
+  tools, // Provides: storeMemory, searchMemory
   messages: [...]
 });
 ```
 
 **Available tools:**
-- `storeMemory` - Store important information
-- `searchMemory` - Search past memories
-- `searchGraph` - Traverse the knowledge graph
+- `storeMemory` - Store important information in memory
+- `searchMemory` - Search past memories with configurable retrieval strategies
 
 [View full tool documentation →](/api/tools)
 
