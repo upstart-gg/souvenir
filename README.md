@@ -1,26 +1,22 @@
-# 🎁 Souvenir
+# Souvenir
 
 **Memory management system for AI agents built with the Vercel AI SDK**
 
 Souvenir provides efficient and context-aware memory capabilities for AI agents, enabling them to store, retrieve, and utilize past interactions through a hybrid architecture combining vector search with knowledge graphs.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue)](https://www.typescriptlang.org/)
-[![Bun](https://img.shields.io/badge/Bun-1.0-orange)](https://bun.sh/)
-
 ## Features
 
 **Based on research from** *"Optimizing the Interface Between Knowledge Graphs and LLMs for Complex Reasoning"* ([arXiv:2505.24478](https://arxiv.org/abs/2505.24478))
 
-- 🔍 **Multiple Retrieval Strategies** - Vector, graph-neighborhood, graph-completion, graph-summary, and hybrid modes
-- 🕸️ **Knowledge Graphs** - Relationship-aware memory with graph traversal and formatted triplets for LLMs
-- 📝 **Summary Nodes** - Automatic session and subgraph summarization for better retrieval
-- 🧩 **Entity Extraction** - Configurable LLM-powered entity and relationship detection
-- 🎨 **Context Formatting** - Optimized graph context formatting for LLM consumption
-- 🔄 **Multi-Runtime Support** - Works on Node.js 20+, Bun, Deno, and Cloudflare Workers
-- 🛠️ **Pre-built Tools** - Ready-to-use tools for Vercel AI SDK v5
-- 📦 **Type-Safe** - Full TypeScript support with comprehensive types
-- 🎯 **ETL Pipeline** - Extract, Transform, Load architecture
+- **Multiple Retrieval Strategies** - Vector, graph-neighborhood, graph-completion, graph-summary, and hybrid modes
+- **Knowledge Graphs** - Relationship-aware memory with graph traversal and formatted triplets for LLMs
+- **Summary Nodes** - Automatic session and subgraph summarization for better retrieval
+- **Entity Extraction** - Configurable LLM-powered entity and relationship detection
+- **Context Formatting** - Optimized graph context formatting for LLM consumption
+- **Multi-Runtime Support** - Works on Node.js 20+, Bun, Deno, and Cloudflare Workers
+- **Pre-built Tools** - Ready-to-use tools for Vercel AI SDK v5
+- **Type-Safe** - Full TypeScript support with comprehensive types
+- **ETL Pipeline** - Extract, Transform, Load architecture
 
 ## Installation
 
@@ -34,7 +30,9 @@ bun add @upstart.gg/souvenir ai postgres
 
 ### 1. Set up your database
 
-Souvenir requires PostgreSQL with the `pgvector` extension. Run the migrations:
+Souvenir requires PostgreSQL with the `pgvector` extension. 
+You can find migration files in the `db/migrations/` directory.
+Those are formated for use with [dbmate](https://github.com/amacneil/dbmate).
 
 ```bash
 # Using dbmate
@@ -49,7 +47,7 @@ import { openai } from '@ai-sdk/openai';
 
 const souvenir = new Souvenir(
   {
-    databaseUrl: process.env.DATABASE_URL!,
+    databaseUrl: process.env.DATABASE_URL,
   },
   {
     // Use any embedding model from Vercel AI SDK
@@ -62,7 +60,7 @@ const souvenir = new Souvenir(
 );
 ```
 
-### 3. Use with Vercel AI SDK
+### 3. Integrate Souvenir tools into your agent
 
 ```typescript
 import { generateText } from 'ai';
@@ -99,11 +97,11 @@ const result = await generateText({
   ],
 });
 
-console.log(result.text);
+// [...]
 // Agent automatically stores preferences and can retrieve them later
 ```
 
-## Using with Vercel AI SDK Tools
+## Souvenir pre-built tools
 
 Souvenir provides **2 pre-built tools** that work seamlessly with the Vercel AI SDK. This is the primary way to use Souvenir - through AI agents autonomously calling memory tools:
 
@@ -118,43 +116,6 @@ Souvenir provides **2 pre-built tools** that work seamlessly with the Vercel AI 
    - Searches using semantic similarity (vector search)
    - Optionally explores the knowledge graph for related context
    - Returns LLM-consumable formatted results
-
-```typescript
-import { generateText } from 'ai';
-import { openai } from '@ai-sdk/openai';
-import { createSouvenirTools } from '@upstart.gg/souvenir/tools';
-import { Souvenir, AIEmbeddingProvider } from '@upstart.gg/souvenir';
-
-// Initialize Souvenir
-const souvenir = new Souvenir(
-  { databaseUrl: process.env.DATABASE_URL! },
-  {
-    sessionId: 'user-123',
-    embeddingProvider: new AIEmbeddingProvider(
-      openai.embedding('text-embedding-3-small')
-    ),
-    processorModel: openai('gpt-4o-mini'),
-  }
-);
-
-// Create tools for the agent
-const tools = createSouvenirTools(souvenir);
-
-// Agent autonomously uses memory
-const result = await generateText({
-  model: openai('gpt-4o'),
-  tools,
-  maxSteps: 10,
-  prompt: 'Remember that I love TypeScript and use it for all my projects. What do you know about my preferences?',
-});
-```
-
-The AI agent can now autonomously:
-- **Store** information with `storeMemory` tool (agent calls when learning something)
-- **Search** with automatic graph exploration via `searchMemory` tool (agent calls when needing context)
-- Build knowledge graphs automatically as it learns
-- Receive formatted context ready for LLM consumption
-
 
 ## Core Concepts
 
