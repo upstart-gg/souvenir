@@ -7,47 +7,6 @@ import { z } from 'zod';
 import type { Souvenir } from '../core/souvenir.js';
 
 /**
- * Trivial phrases that shouldn't be stored in long-term memory
- */
-const TRIVIAL_PHRASES = new Set([
-  'ok',
-  'okay',
-  'yes',
-  'no',
-  'thanks',
-  'thank you',
-  'bye',
-  'goodbye',
-  'hello',
-  'hi',
-  'hey',
-  'sure',
-  'alright',
-  'got it',
-  'understood',
-  'k',
-]);
-
-/**
- * Check if content is too trivial to store
- */
-function isTrivialContent(content: string): boolean {
-  const normalized = content.toLowerCase().trim();
-
-  // Check against trivial phrases
-  if (TRIVIAL_PHRASES.has(normalized)) {
-    return true;
-  }
-
-  // Check if it's just punctuation or very short
-  if (normalized.replace(/[^a-z0-9]/g, '').length < 3) {
-    return true;
-  }
-
-  return false;
-}
-
-/**
  * Create memory tools for use with Vercel AI SDK
  */
 export function createSouvenirTools(souvenir: Souvenir) {
@@ -67,14 +26,6 @@ export function createSouvenirTools(souvenir: Souvenir) {
           .describe('Optional metadata about this memory'),
       }),
       execute: async ({ content, sessionId, metadata }) => {
-        // Filter trivial content before storing
-        if (content.length < 20 || isTrivialContent(content)) {
-          return {
-            success: false,
-            message: 'Content too trivial to store in long-term memory',
-          };
-        }
-
         const chunkIds = await souvenir.add(content, {
           sessionId,
           metadata,

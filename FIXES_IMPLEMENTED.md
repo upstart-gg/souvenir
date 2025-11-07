@@ -104,42 +104,25 @@ if (!node) {
 
 ---
 
-## ✅ 4. Trivial Content Filtering
+## ❌ 4. Trivial Content Filtering - INTENTIONALLY NOT IMPLEMENTED
 
-**Issue**: System processed meaningless content like "ok", "thanks", wasting LLM calls
+**Issue**: System might process meaningless content like "ok", "thanks"
 
-**Fix**: Filter trivial content before storing in memory
+**Decision**: **Do not implement filtering** - trust the agent's judgment
 
-**Files Changed**:
-- `src/tools/index.ts` (lines 12-48, 71-76)
+**Rationale**:
+In a tools-first architecture, the **agent decides when to call storeMemory**. Modern LLM agents are smart enough not to store trivial content like greetings. If an agent is calling `storeMemory("ok")`, that indicates:
+- Poor agent prompting (should be fixed at agent level)
+- Low-quality model (should upgrade model)
+- Intentional testing (filter would interfere)
 
-**Changes**:
-```typescript
-// Added trivial phrases set
-const TRIVIAL_PHRASES = new Set([
-  'ok', 'okay', 'yes', 'no', 'thanks', 'thank you',
-  'bye', 'goodbye', 'hello', 'hi', 'hey',
-  'sure', 'alright', 'got it', 'understood', 'k',
-]);
+Adding trivial filtering creates an architectural inconsistency:
+- We **trust** the agent to decide WHEN to store memory
+- But **don't trust** it to know WHAT is worth storing
 
-// Added filtering function
-function isTrivialContent(content: string): boolean {
-  const normalized = content.toLowerCase().trim();
-  if (TRIVIAL_PHRASES.has(normalized)) return true;
-  if (normalized.replace(/[^a-z0-9]/g, '').length < 3) return true;
-  return false;
-}
+This contradicts the core philosophy: the agent is the intelligent decision-maker, not the library.
 
-// Filter in storeMemory tool
-if (content.length < 20 || isTrivialContent(content)) {
-  return {
-    success: false,
-    message: 'Content too trivial to store in long-term memory',
-  };
-}
-```
-
-**Result**: Greetings and trivial phrases rejected, saving LLM costs
+**Result**: Removed filtering logic - agents have full control
 
 ---
 
@@ -214,7 +197,7 @@ All QUESTIONABLE, INCONSISTENT, and Missing features from the compliance analysi
 | Blocking Processing | ✅ Fixed | Agent no longer waits 10-50s |
 | Session-Scoped Processing | ✅ Fixed | No cross-user data processing |
 | Entity Deduplication | ✅ Fixed | Graph consistency maintained |
-| Trivial Content Filtering | ✅ Fixed | Reduced LLM costs |
+| Trivial Content Filtering | ❌ Not Implemented | Trusts agent judgment (architectural decision) |
 | Top-K Standardization | ✅ Fixed | Follows paper recommendations |
 | Embedding Validation | ✅ Fixed | Prevents silent failures |
 
@@ -226,10 +209,10 @@ All QUESTIONABLE, INCONSISTENT, and Missing features from the compliance analysi
 
 1. **Session Isolation**: Test that processAll({ sessionId: 'user1' }) doesn't process user2's chunks
 2. **Entity Deduplication**: Add same entity in multiple chunks, verify only one node created
-3. **Trivial Filtering**: Try storing "ok", "thanks" - should be rejected
-4. **Background Processing**: Verify storeMemory returns immediately
-5. **Embedding Validation**: Test with mismatched dimensions - should throw clear error
-6. **Top-K Consistency**: Verify all retrieval strategies use K=5
+3. **Background Processing**: Verify storeMemory returns immediately
+4. **Embedding Validation**: Test with mismatched dimensions - should throw clear error
+5. **Top-K Consistency**: Verify all retrieval strategies use K=5
+6. **Agent Tool Usage**: Verify agents can store any content they choose (no filtering)
 
 ---
 
