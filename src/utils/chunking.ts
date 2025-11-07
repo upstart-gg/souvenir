@@ -132,5 +132,8 @@ export function calculateChunkSize(contentType: string): number {
     default: 1000,
   };
 
-  return sizes[contentType] || sizes.default;
+  // With noUncheckedIndexedAccess enabled, indexed access may be undefined.
+  // Use an explicit conditional to narrow the type to number.
+  const value = sizes[contentType];
+  return value ?? (sizes.default as number);
 }
