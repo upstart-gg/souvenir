@@ -13,6 +13,7 @@ interface StoreMemoryTool {
   execute: (params: {
     content: string;
     metadata?: Record<string, unknown>;
+    processImmediately?: boolean;
   }) => Promise<{
     success: boolean;
     chunkIds: string[];
