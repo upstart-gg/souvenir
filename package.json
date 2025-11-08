@@ -34,6 +34,7 @@
     "docker:clean": "docker-compose down -v",
     "docker:logs": "docker-compose logs postgres",
     "docker:status": "docker-compose ps",
+    "db:up": "dbmate -d db/migrations -s db/schema.sql up",
     "db:diagnose": "bash scripts/diagnose-db.sh",
     "typecheck": "tsc --noEmit",
     "lint": "biome check src",
