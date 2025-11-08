@@ -42,17 +42,11 @@ export class MemoryRepository {
   }
 
   async getNode(id: string): Promise<MemoryNode | null> {
-    try {
-      const [row] = await this.db.query`
-        SELECT * FROM memory_nodes WHERE id = ${id}
-      `;
+    const [row] = await this.db.query`
+      SELECT * FROM memory_nodes WHERE id = ${id}
+    `;
 
-      return row ? this.mapNode(row) : null;
-    } catch (_error) {
-      // Handle invalid UUID format gracefully - return null instead of throwing
-      // The postgres library throws when trying to cast invalid UUID
-      return null;
-    }
+    return row ? this.mapNode(row) : null;
   }
 
   async updateNode(
@@ -197,31 +191,33 @@ export class MemoryRepository {
   // ============ Memory Sessions ============
 
   async createSession(
+    id: string,
     sessionName?: string,
     metadata: Record<string, unknown> = {},
   ): Promise<MemorySession> {
     const rows = await this.db.query`
-      INSERT INTO memory_sessions (session_name, metadata)
-      VALUES (${sessionName || null}, ${this.db.query.json(metadata as Parameters<typeof this.db.query.json>[0])})
+      INSERT INTO memory_sessions (id, session_name, metadata)
+      VALUES (${id}, ${sessionName || null}, ${this.db.query.json(metadata as Parameters<typeof this.db.query.json>[0])})
+      ON CONFLICT (id) DO NOTHING
       RETURNING *
     `;
 
     const row = rows[0];
-    if (!row) throw new Error("Failed to create session");
+    // If no row returned, session already exists - fetch it
+    if (!row) {
+      const existing = await this.getSession(id);
+      if (existing) return existing;
+      throw new Error("Failed to create session");
+    }
     return this.mapSession(row as Record<string, unknown>);
   }
 
   async getSession(id: string): Promise<MemorySession | null> {
-    try {
-      const [row] = await this.db.query`
-        SELECT * FROM memory_sessions WHERE id = ${id}
-      `;
+    const [row] = await this.db.query`
+      SELECT * FROM memory_sessions WHERE id = ${id}
+    `;
 
-      return row ? this.mapSession(row) : null;
-    } catch (_error) {
-      // Handle invalid UUID format gracefully - return null
-      return null;
-    }
+    return row ? this.mapSession(row) : null;
   }
 
   async addNodeToSession(sessionId: string, nodeId: string): Promise<void> {
@@ -258,14 +254,6 @@ export class MemoryRepository {
 
   async getNodesInSession(sessionId: string): Promise<MemoryNode[]> {
     try {
-      // Validate sessionId is a proper UUID before querying
-      const uuidRegex =
-        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-      if (!uuidRegex.test(sessionId)) {
-        console.error(`Invalid session ID format: ${sessionId}`);
-        return [];
-      }
-
       const rows = await this.db.query`
         SELECT mn.* FROM memory_nodes mn
         JOIN session_nodes sn ON mn.id = sn.node_id

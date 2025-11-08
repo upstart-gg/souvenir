@@ -15,23 +15,21 @@ When you add content to memory, Souvenir automatically breaks it into smaller pi
 
 Souvenir supports two chunking strategies, each optimized for different content types.
 
-### Token Chunking (Default - Recommended for Most Agents)
+### Token Chunking (For Fixed-Size Requirements)
 
 **What it does**: Splits text into fixed-size chunks with configurable overlap.
 
 **Best for**:
-- ✅ Conversational memory ("I like pizza", "My name is Alice")
-- ✅ User preferences and facts
-- ✅ Chat history
-- ✅ Short-form content (most agent memory)
-- ✅ When you need predictable chunk sizes
-- ✅ Fast processing
+- ✅ When you have strict token limits to respect
+- ✅ Highly predictable chunk sizes required
+- ✅ Maximum processing speed is critical
+- ✅ Very uniform, short-form content only
 
 **Configuration**:
 ```typescript
 const souvenir = new Souvenir({
   databaseUrl: process.env.DATABASE_URL!,
-  chunkingMode: 'token', // Default
+  chunkingMode: 'token',
   chunkSize: 1000,       // Tokens per chunk
   chunkOverlap: 200,     // Overlap between chunks
   chunkingTokenizer: 'character', // Optional: 'Xenova/gpt2' for better accuracy
@@ -54,25 +52,26 @@ const souvenir = new Souvenir({
 - ⚡ Fast and simple
 - 📏 Predictable chunk sizes (respects token limits)
 - 🔄 Overlap preserves context at boundaries
-- 👌 Perfect for conversational memory
 
 **Cons**:
-- ✂️ May split sentences awkwardly
+- ✂️ May split sentences and thoughts awkwardly
 - 📝 Ignores document structure
-- 🎯 Less semantic for long-form content
+- 🎯 Less semantic coherence
+- ❌ Can break context mid-sentence
 
 ---
 
-### Recursive Chunking (Advanced - For Structured Content)
+### Recursive Chunking (Default - Recommended for Agents)
 
 **What it does**: Intelligently splits text following natural structure (paragraphs → sentences → words → characters).
 
 **Best for**:
+- ✅ **Agent memory** - handles both short facts and longer context
+- ✅ Conversational memory with complete thoughts
 - ✅ Documentation and articles
-- ✅ Long-form emails or messages
-- ✅ Research papers
-- ✅ Knowledge base content
-- ✅ Structured documents (headers, sections)
+- ✅ Code snippets and analysis
+- ✅ Research papers and emails
+- ✅ Mixed content types (what agents typically save)
 
 **Configuration**:
 ```typescript
@@ -117,57 +116,57 @@ const chunks = await chunkText(documentation, {
 ```
 
 **Pros**:
-- 📚 Respects document structure
-- 🎯 Semantic boundaries (complete thoughts)
-- 🔍 Better retrieval for long-form content
-- ⚙️ Customizable rules
+- 📚 Respects natural text structure  
+- 🎯 Semantic boundaries (complete thoughts stay together)
+- 🔍 Better retrieval quality across all content types
+- 🤖 Handles agent use cases: short facts AND long context
+- ⚙️ Customizable rules for specific needs
 
 **Cons**:
-- 📐 Variable chunk sizes
-- 🐢 Slower processing
-- 🤔 More complex to configure
-- 📄 Requires structured content
+- 📐 Variable chunk sizes (less predictable)
+- 🐢 Slightly slower (~5ms vs ~1ms per 1000 chars)
+- 🤔 More configuration options (though defaults work well)
 
 ---
 
 ## Quick Decision Guide
 
-### Use Token Mode (Default) When:
+### Use Recursive Mode (Default - Recommended)
 ```typescript
-// ✅ Most memory management scenarios
+// ✅ Best for most agent memory scenarios
 const souvenir = new Souvenir({
-  chunkingMode: 'token', // Default
-  chunkSize: 1000,
-  chunkOverlap: 200,
-});
-
-// Conversational memories
-await souvenir.add("I love Italian food and I'm allergic to shellfish");
-
-// User facts
-await souvenir.add("User's birthday is June 5th, 1990");
-
-// Preferences
-await souvenir.add("Prefers emails over phone calls");
-```
-
-### Use Recursive Mode When:
-```typescript
-// ✅ Processing structured documents
-const souvenir = new Souvenir({
-  chunkingMode: 'recursive',
+  chunkingMode: 'recursive', // This is the default
   chunkSize: 1500,
   minCharactersPerChunk: 100,
 });
 
-// Long documentation
-await souvenir.add(technicalManual);
+// Handles everything agents save:
+// ✅ Short facts
+await souvenir.add("User's name is Bob, allergic to shellfish");
 
-// Research papers
-await souvenir.add(academicPaper);
+// ✅ Longer context
+await souvenir.add("User is working on authentication feature using NextAuth.js with PostgreSQL adapter...");
 
-// Structured emails
-await souvenir.add(longEmail);
+// ✅ Code snippets
+await souvenir.add(codeSnippet);
+
+// ✅ Documentation
+await souvenir.add(documentation);
+```
+
+### Use Token Mode When:
+```typescript
+// ⚠️ Only if you have specific requirements
+const souvenir = new Souvenir({
+  chunkingMode: 'token',
+  chunkSize: 1000,
+  chunkOverlap: 200,
+});
+
+// Use cases:
+// - Strict token limits must be enforced
+// - Need guaranteed maximum chunk size
+// - Processing speed is absolutely critical
 ```
 
 ---
@@ -178,7 +177,7 @@ await souvenir.add(longEmail);
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `chunkingMode` | `'token' \| 'recursive'` | `'token'` | Chunking strategy |
+| `chunkingMode` | `'token' \| 'recursive'` | `'recursive'` | Chunking strategy |
 | `chunkSize` | `number` | `1000` | Target chunk size in tokens |
 | `chunkingTokenizer` | `string` | `'character'` | Tokenizer: `'character'`, `'Xenova/gpt2'`, etc. |
 
@@ -300,8 +299,24 @@ console.log('Example:', recursiveChunks[0]);
 
 ## Best Practices
 
-### 1. Start with Token Mode
-Most agents work best with the default token mode:
+### 1. Use the Default (Recursive Mode)
+The default works great for agents because they save diverse content:
+```typescript
+{
+  chunkingMode: 'recursive', // This is the default - keep it!
+  chunkSize: 1500,
+  minCharactersPerChunk: 100,
+}
+```
+
+**Why recursive is best for agents:**
+- Agents save both short facts ("user is Bob") AND longer context (code, analysis)
+- Keeps complete thoughts together (better retrieval)
+- Handles all content types gracefully
+- Slight performance trade-off (~4ms extra per 1000 chars) is worth it
+
+### 2. Only Switch to Token Mode If Needed
+Only use token mode for specific edge cases:
 ```typescript
 {
   chunkingMode: 'token',
@@ -310,15 +325,10 @@ Most agents work best with the default token mode:
 }
 ```
 
-### 2. Upgrade to Recursive for Documents
-Switch to recursive when processing structured content:
-```typescript
-{
-  chunkingMode: 'recursive',
-  chunkSize: 1500,
-  minCharactersPerChunk: 100,
-}
-```
+**When to consider token mode:**
+- You have strict, immutable token limits from your LLM
+- You're processing millions of chunks and speed matters more than quality
+- You have very uniform, predictable content types
 
 ### 3. Adjust Chunk Size Based on Content
 - **Short memories (chat)**: 500-1000 tokens

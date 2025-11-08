@@ -280,7 +280,10 @@ describe("Souvenir Integration Tests", () => {
 
     it("should return null for non-existent nodes", async () => {
       await withTestDatabase(async () => {
-        const node = await souvenir.getNode("non-existent-id-12345");
+        // Use a valid UUID format for nodes (nodes still use UUID)
+        const node = await souvenir.getNode(
+          "00000000-0000-0000-0000-000000000000",
+        );
         expect(node).toBeNull();
       });
     });

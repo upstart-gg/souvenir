@@ -618,10 +618,11 @@ export class Souvenir {
   // ============ Session Management ============
 
   async createSession(
+    id: string,
     name?: string,
     metadata?: Record<string, unknown>,
   ): Promise<MemorySession> {
-    return this.repository.createSession(name, metadata);
+    return this.repository.createSession(id, name, metadata);
   }
 
   async getSession(id: string): Promise<MemorySession | null> {

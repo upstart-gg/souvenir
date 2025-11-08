@@ -50,7 +50,7 @@ const souvenir = new Souvenir({
 
 - **chunkSize** (default: 1000): Target chunk size in tokens
 - **chunkOverlap** (default: 200): Overlap between chunks
-- **chunkingMode** (default: 'token'): Chunking strategy
+- **chunkingMode** (default: 'recursive'): Chunking strategy
   - `'token'`: Fixed-size chunks with overlap
   - `'recursive'`: Hierarchical splitting
 - **chunkingTokenizer** (optional): Custom tokenizer

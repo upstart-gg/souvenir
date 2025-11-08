@@ -5,10 +5,10 @@ Give your Vercel AI SDK agent long-term memory in under 5 minutes.
 ## Overview
 
 Souvenir provides **automatic memory tools** for AI agents. Your agent will:
-- ✅ Automatically store important information
-- ✅ Retrieve relevant memories when needed
-- ✅ Build a knowledge graph of entities and relationships
-- ✅ Remember across conversations
+- Automatically store important information
+- Retrieve relevant memories when needed
+- Build a knowledge graph of entities and relationships
+- Remember across conversations
 
 You just create the tools and add them to your agent. That's it.
 
@@ -37,6 +37,11 @@ const souvenir = new Souvenir(
 ```
 
 **Important**: Create a separate Souvenir instance for each user/session. Each instance is bound to a specific sessionId, ensuring complete data isolation.
+
+**Session ID Format**: The `sessionId` can be any string (max 255 characters) - use whatever format works for your application:
+- User IDs: `'user-123'`, `'alice@example.com'`, `'auth0|507f1f77bcf86cd799439011'`
+- Session IDs: `'session-abc123'`, `'conv-2024-01-15-xyz'`
+- Custom formats: `'workspace:acme:user:bob'`, `'tenant-42-user-99'`
 
 ### 2. Create Memory Tools
 

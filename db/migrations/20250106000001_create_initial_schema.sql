@@ -31,7 +31,7 @@ CREATE TABLE memory_relationships (
 
 -- Memory sessions table: groups related memories
 CREATE TABLE memory_sessions (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id VARCHAR(255) PRIMARY KEY,
   session_name VARCHAR(255),
   metadata JSONB DEFAULT '{}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -40,7 +40,7 @@ CREATE TABLE memory_sessions (
 
 -- Session nodes junction table
 CREATE TABLE session_nodes (
-  session_id UUID NOT NULL REFERENCES memory_sessions(id) ON DELETE CASCADE,
+  session_id VARCHAR(255) NOT NULL REFERENCES memory_sessions(id) ON DELETE CASCADE,
   node_id UUID NOT NULL REFERENCES memory_nodes(id) ON DELETE CASCADE,
   added_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   PRIMARY KEY (session_id, node_id)

@@ -85,7 +85,7 @@ const souvenir = new Souvenir(
     maxResults?: number;              // Default: 10
   },
   {
-    sessionId: string;                // Required: session identifier
+    sessionId: string;                // Required: session identifier (any string, max 255 chars)
     embeddingProvider: EmbeddingProvider; // Required: embedding model
     processorModel?: LanguageModel;   // Optional: entity extraction LLM
     promptTemplates?: PromptTemplates; // Optional: custom prompts

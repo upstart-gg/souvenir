@@ -43,12 +43,16 @@ const souvenir = new Souvenir({
 });
 ```
 
-**Token Mode** (default):
+**Recursive Mode** (default - recommended):
+- Hierarchical splitting (paragraphs → sentences → words)
+- Respects natural boundaries and structure
+- Better semantic coherence
+- **Best for agents** - handles both short facts and longer context
+
+**Token Mode**:
 - Fixed-size chunks with overlap
 - Predictable chunk sizes
-- Good for consistent context windows
-
-**Recursive Mode**:
+- Good when strict token limits required
 - Hierarchical splitting (paragraphs → sentences → words)
 - Respects document structure
 - Better for maintaining semantic boundaries

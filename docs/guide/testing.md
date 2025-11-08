@@ -10,13 +10,6 @@ Souvenir uses Bun's test runner with ISO-compliant database setup via **dbmate m
 - Docker & Docker Compose (for local integration tests)
 - dbmate (for running migrations)
 
-Install dbmate:
-```bash
-brew install dbmate  # macOS
-# or
-wget https://github.com/amacneil/dbmate/releases/download/v2.23.0/dbmate-linux-amd64
-```
-
 ## Running Tests
 
 ### Unit Tests (No Database Required)
