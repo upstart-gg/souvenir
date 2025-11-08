@@ -37,7 +37,3 @@ docs/.vitepress/cache/
 # Bun
 .bun/
 
-# Changesets
-.changeset/*.md
-!.changeset/README.md
-!.changeset/config.json
