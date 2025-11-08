@@ -12,6 +12,7 @@ import type { Souvenir } from "../core/souvenir.js";
 export function createSouvenirTools(souvenir: Souvenir): {
   storeMemory: unknown;
   searchMemory: unknown;
+  deleteMemory: unknown;
 } {
   const storeMemorySchema = z.object({
     content: z.string().describe("The information to store in memory"),
@@ -34,6 +35,14 @@ export function createSouvenirTools(souvenir: Souvenir): {
       .optional()
       .describe(
         "Whether to explore related memories in the knowledge graph (default: true)",
+      ),
+  });
+
+  const deleteMemorySchema = z.object({
+    nodeIds: z
+      .array(z.string())
+      .describe(
+        'Array of memory node IDs to delete. Node IDs can be extracted from search results using the <memory-node id="..."/> tags.',
       ),
   });
 
@@ -114,18 +123,18 @@ export function createSouvenirTools(souvenir: Souvenir): {
             });
 
             if (keywordMatches.length > 0) {
-              // Build minimal context from keyword matches
+              // Build minimal memory from keyword matches
               const header = `# Memory Search Results\n\nFound ${keywordMatches.length} relevant memories:\n\n`;
               const body = keywordMatches
                 .slice(0, 5)
                 .map(
                   (n, idx) =>
-                    `## Memory ${idx + 1} (relevance: 0%)\n${n.content}`,
+                    `## Memory ${idx + 1} (relevance: 0%)\n\n<memory-node id="${n.id}" />\n\n${n.content}`,
                 )
                 .join("\n\n");
               return {
                 success: true,
-                context: header + body,
+                memory: header + body,
                 message: `Found ${keywordMatches.length} memories (keyword fallback)`,
                 metadata: {
                   query,
@@ -138,11 +147,11 @@ export function createSouvenirTools(souvenir: Souvenir): {
             // ignore fallback errors and return empty
           }
 
-          // Provide structured empty context matching test expectations while signaling no results
-          const emptyContext = `# Memory Search Results\n\nFound 0 relevant memories:\n\nNo relevant memories found.`;
+          // Provide structured empty memory matching test expectations while signaling no results
+          const emptyMemory = `# Memory Search Results\n\nFound 0 relevant memories:\n\nNo relevant memories found.`;
           return {
             success: false,
-            context: emptyContext,
+            memory: emptyMemory,
             message: "No relevant memories found in the knowledge graph.",
             metadata: {
               query,
@@ -153,7 +162,7 @@ export function createSouvenirTools(souvenir: Souvenir): {
         }
       }
 
-      let context = "";
+      let memory = "";
 
       if (explore) {
         // Use hybrid strategy to get richer graph structure
@@ -168,13 +177,14 @@ export function createSouvenirTools(souvenir: Souvenir): {
           hybridResults.length > 0 ? hybridResults : vectorResults;
 
         // Format for LLM consumption with graph relationships (if available)
-        context = `# Memory Search Results\n\nFound ${toFormat.length} relevant memories:\n\n`;
-        context += toFormat
+        memory = `# Memory Search Results\n\nFound ${toFormat.length} relevant memories:\n\n`;
+        memory += toFormat
           .map((result, idx) => {
             const parts: string[] = [];
             parts.push(
               `## Memory ${idx + 1} (relevance: ${(result.score * 100).toFixed(0)}%)`,
             );
+            parts.push(`<memory-node id="${result.node.id}" />`);
             parts.push(result.node.content);
 
             if (result.relationships && result.relationships.length > 0) {
@@ -208,13 +218,14 @@ export function createSouvenirTools(souvenir: Souvenir): {
           .join("\n\n");
       } else {
         // Simple vector search results formatted for LLM
-        context = `# Memory Search Results\n\nFound ${vectorResults.length} relevant memories:\n\n`;
-        context += vectorResults
+        memory = `# Memory Search Results\n\nFound ${vectorResults.length} relevant memories:\n\n`;
+        memory += vectorResults
           .map((result, idx) => {
             const parts: string[] = [];
             parts.push(
               `## Memory ${idx + 1} (relevance: ${(result.score * 100).toFixed(0)}%)`,
             );
+            parts.push(`<memory-node id="${result.node.id}" />`);
             parts.push(result.node.content);
             return parts.join("\n");
           })
@@ -223,7 +234,7 @@ export function createSouvenirTools(souvenir: Souvenir): {
 
       return {
         success: true,
-        context,
+        memory,
         message: `Found ${vectorResults.length} memories${explore ? " with graph exploration" : ""}`,
         metadata: {
           query,
@@ -234,9 +245,46 @@ export function createSouvenirTools(souvenir: Souvenir): {
     },
   });
 
+  /**
+   * Delete memories by their node IDs
+   * Node IDs can be extracted from searchMemory results using the <memory-node id="..."/> tags
+   */
+  const deleteMemoryTool = tool({
+    description:
+      'Delete specific memories from long-term storage using their node IDs. Node IDs can be found in search results within the <memory-node id="..."/> tags. Use this to remove outdated, incorrect, or irrelevant information.',
+    inputSchema: deleteMemorySchema,
+    execute: async (params: z.infer<typeof deleteMemorySchema>) => {
+      const { nodeIds } = params;
+
+      if (nodeIds.length === 0) {
+        return {
+          success: false,
+          deletedCount: 0,
+          message: "No node IDs provided",
+        };
+      }
+
+      try {
+        await souvenir.deleteNodes(nodeIds);
+        return {
+          success: true,
+          deletedCount: nodeIds.length,
+          message: `Deleted ${nodeIds.length} memory node(s)`,
+        };
+      } catch (error) {
+        return {
+          success: false,
+          deletedCount: 0,
+          message: `Failed to delete memories: ${error instanceof Error ? error.message : String(error)}`,
+        };
+      }
+    },
+  });
+
   return {
     storeMemory: storeMemoryTool,
     searchMemory: searchMemoryTool,
+    deleteMemory: deleteMemoryTool,
   };
 }
 

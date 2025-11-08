@@ -666,6 +666,10 @@ export class Souvenir {
     await this.repository.deleteNode(id);
   }
 
+  async deleteNodes(ids: string[]): Promise<void> {
+    await Promise.all(ids.map((id) => this.repository.deleteNode(id)));
+  }
+
   async getNodesInSession(sessionId: string): Promise<MemoryNode[]> {
     return this.repository.getNodesInSession(sessionId);
   }

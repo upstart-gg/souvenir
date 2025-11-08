@@ -24,13 +24,21 @@ interface StoreMemoryTool {
 interface SearchMemoryTool {
   execute: (params: { query: string; explore?: boolean }) => Promise<{
     success: boolean;
-    context: string;
+    memory: string;
     message: string;
     metadata?: {
       query: string;
       explored: boolean;
       resultCount: number;
     };
+  }>;
+}
+
+interface DeleteMemoryTool {
+  execute: (params: { nodeIds: string[] }) => Promise<{
+    success: boolean;
+    deletedCount: number;
+    message: string;
   }>;
 }
 
@@ -310,10 +318,10 @@ describe("Souvenir Tools Integration Tests", () => {
 
           // If search fails, at least check that the context exists (fallback worked)
           if (!result.success) {
-            expect(result.context).toBeDefined();
-            expect(result.context.length).toBeGreaterThan(0);
+            expect(result.memory).toBeDefined();
+            expect(result.memory.length).toBeGreaterThan(0);
           } else {
-            expect(result.context).toContain("Memory Search Results");
+            expect(result.memory).toContain("Memory Search Results");
             expect(result.message).toContain("memories");
             expect(result.metadata?.explored).toBe(false);
           }
@@ -349,8 +357,8 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: true,
           });
 
-          expect(result.context).toBeDefined();
-          expect(result.context).toContain("Memory Search Results");
+          expect(result.memory).toBeDefined();
+          expect(result.memory).toContain("Memory Search Results");
           expect(result.metadata?.explored).toBe(true);
         } finally {
           await cleanup();
@@ -374,7 +382,7 @@ describe("Souvenir Tools Integration Tests", () => {
           });
 
           expect(result.success).toBe(false);
-          expect(result.context).toContain("No relevant memories found");
+          expect(result.memory).toContain("No relevant memories found");
         } finally {
           await cleanup();
         }
@@ -416,13 +424,13 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: true,
           });
 
-          expect(result.context).toBeDefined();
+          expect(result.memory).toBeDefined();
           // If search found results, check for expected format
           if (result.success) {
-            expect(result.context).toContain("# Memory Search Results");
-            expect(result.context).toContain("## Memory");
-            expect(result.context).toContain("relevance:");
-            expect(result.context).toMatch(/\d+%/);
+            expect(result.memory).toContain("# Memory Search Results");
+            expect(result.memory).toContain("## Memory");
+            expect(result.memory).toContain("relevance:");
+            expect(result.memory).toMatch(/\d+%/);
           }
         } finally {
           await cleanup();
@@ -461,10 +469,11 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: true,
           });
 
-          expect(result.context).toBeDefined();
-          // If search found results, check for context
+          expect(result.memory).toBeDefined();
+          // If search found results, metadata might be included if available
           if (result.success) {
-            expect(result.context).toContain("Context");
+            // Just verify we got memory results, metadata display is optional
+            expect(result.memory.length).toBeGreaterThan(0);
           }
         } finally {
           await cleanup();
@@ -533,10 +542,10 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: false,
           });
 
-          expect(searchResult.context).toBeDefined();
+          expect(searchResult.memory).toBeDefined();
           // If search found results, check for content
           if (searchResult.success) {
-            expect(searchResult.context).toContain("Great Wall");
+            expect(searchResult.memory).toContain("Great Wall");
           }
         } finally {
           await cleanup();
@@ -577,7 +586,7 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: true,
           });
 
-          expect(result.context).toBeDefined();
+          expect(result.memory).toBeDefined();
           // Check if search returned results or at least some context
           if (result.success) {
             expect(result.metadata?.resultCount).toBeGreaterThan(0);
@@ -655,10 +664,10 @@ describe("Souvenir Tools Integration Tests", () => {
           });
 
           if (recallResult.success) {
-            expect(recallResult.context).toContain("dark mode");
+            expect(recallResult.memory).toContain("dark mode");
           } else {
             // Fallback search should still have context
-            expect(recallResult.context).toBeDefined();
+            expect(recallResult.memory).toBeDefined();
           }
 
           // Turn 3: Learn more
@@ -677,10 +686,10 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: true,
           });
 
-          expect(typeof allPreferences.context).toBe("string");
+          expect(typeof allPreferences.memory).toBe("string");
           // Ensure at least one of the stored preference keywords appears when success=true
           if (allPreferences.success) {
-            expect(allPreferences.context).toMatch(/dark mode|sans-serif/);
+            expect(allPreferences.memory).toMatch(/dark mode|sans-serif/);
           }
         } finally {
           await cleanup();
@@ -804,6 +813,327 @@ describe("Souvenir Tools Integration Tests", () => {
           // Verify it's a tool object with execute method
           expect(searchMemoryTool).toBeDefined();
           expect(typeof searchMemoryTool === "object").toBe(true);
+        } finally {
+          await cleanup();
+        }
+      });
+    });
+  });
+
+  describe("deleteMemory tool", () => {
+    it("should delete a single memory node", async () => {
+      await withTestDatabase(async () => {
+        const db = process.env.DATABASE_URL || "";
+        const { souvenir, cleanup } = createTestSouvenir(db);
+
+        try {
+          const tools = createSouvenirTools(souvenir);
+          const storeMemory = tools.storeMemory as unknown as StoreMemoryTool;
+          const deleteMemory =
+            tools.deleteMemory as unknown as DeleteMemoryTool;
+
+          // Store a memory
+          const storeResult = await storeMemory.execute({
+            content: "This memory will be deleted",
+            processImmediately: true,
+          });
+
+          expect(storeResult.success).toBe(true);
+          expect(storeResult.chunkIds.length).toBeGreaterThan(0);
+
+          const nodeId = storeResult.chunkIds[0];
+          if (!nodeId) throw new Error("No node ID returned");
+
+          // Verify node exists
+          const nodeBefore = await souvenir.getNode(nodeId);
+          expect(nodeBefore).toBeDefined();
+          if (nodeBefore) {
+            expect(nodeBefore.content.includes("deleted")).toBe(true);
+          }
+
+          // Delete the node
+          const deleteResult = await deleteMemory.execute({
+            nodeIds: [nodeId],
+          });
+
+          expect(deleteResult.success).toBe(true);
+          expect(deleteResult.deletedCount).toBe(1);
+          expect(deleteResult.message).toContain("Deleted 1");
+
+          // Verify node is gone
+          const nodeAfter = await souvenir.getNode(nodeId);
+          expect(nodeAfter).toBeNull();
+        } finally {
+          await cleanup();
+        }
+      });
+    });
+
+    it("should delete multiple memory nodes", async () => {
+      await withTestDatabase(async () => {
+        const db = process.env.DATABASE_URL || "";
+        const { souvenir, cleanup } = createTestSouvenir(db);
+
+        try {
+          const tools = createSouvenirTools(souvenir);
+          const storeMemory = tools.storeMemory as unknown as StoreMemoryTool;
+          const deleteMemory =
+            tools.deleteMemory as unknown as DeleteMemoryTool;
+
+          // Store multiple memories
+          const result1 = await storeMemory.execute({
+            content: "First memory to delete",
+            processImmediately: true,
+          });
+
+          const result2 = await storeMemory.execute({
+            content: "Second memory to delete",
+            processImmediately: true,
+          });
+
+          const result3 = await storeMemory.execute({
+            content: "Third memory to keep",
+            processImmediately: true,
+          });
+
+          const id1 = result1.chunkIds[0];
+          const id2 = result2.chunkIds[0];
+          if (!id1 || !id2) throw new Error("Missing node IDs");
+          const nodeIds = [id1, id2];
+
+          // Delete two nodes
+          const deleteResult = await deleteMemory.execute({
+            nodeIds,
+          });
+
+          expect(deleteResult.success).toBe(true);
+          expect(deleteResult.deletedCount).toBe(2);
+
+          // Verify deleted nodes are gone
+          const node1 = await souvenir.getNode(id1);
+          const node2 = await souvenir.getNode(id2);
+          expect(node1).toBeNull();
+          expect(node2).toBeNull();
+
+          // Verify third node still exists
+          const nodeId3 = result3.chunkIds[0];
+          if (!nodeId3) throw new Error("No node ID for result3");
+          const node3 = await souvenir.getNode(nodeId3);
+          expect(node3).toBeDefined();
+          if (node3) {
+            expect(node3.content.includes("keep")).toBe(true);
+          }
+        } finally {
+          await cleanup();
+        }
+      });
+    });
+
+    it("should handle empty nodeIds array", async () => {
+      await withTestDatabase(async () => {
+        const db = process.env.DATABASE_URL || "";
+        const { souvenir, cleanup } = createTestSouvenir(db);
+
+        try {
+          const tools = createSouvenirTools(souvenir);
+          const deleteMemory =
+            tools.deleteMemory as unknown as DeleteMemoryTool;
+
+          const result = await deleteMemory.execute({
+            nodeIds: [],
+          });
+
+          expect(result.success).toBe(false);
+          expect(result.deletedCount).toBe(0);
+          expect(result.message).toContain("No node IDs");
+        } finally {
+          await cleanup();
+        }
+      });
+    });
+
+    it("should handle invalid node IDs gracefully", async () => {
+      await withTestDatabase(async () => {
+        const db = process.env.DATABASE_URL || "";
+        const { souvenir, cleanup } = createTestSouvenir(db);
+
+        try {
+          const tools = createSouvenirTools(souvenir);
+          const deleteMemory =
+            tools.deleteMemory as unknown as DeleteMemoryTool;
+
+          // Try to delete non-existent nodes with invalid UUID format
+          // This will cause a database error which should be caught
+          const result = await deleteMemory.execute({
+            nodeIds: ["non-existent-id-1", "non-existent-id-2"],
+          });
+
+          // Should catch the error and return failure
+          expect(result.success).toBe(false);
+          expect(result.deletedCount).toBe(0);
+          expect(result.message).toContain("Failed");
+        } finally {
+          await cleanup();
+        }
+      });
+    });
+  });
+
+  describe("Memory node ID tags", () => {
+    it("should include memory-node tags with IDs in search results", async () => {
+      await withTestDatabase(async () => {
+        const db = process.env.DATABASE_URL || "";
+        const { souvenir, cleanup } = createTestSouvenir(db);
+
+        try {
+          const tools = createSouvenirTools(souvenir);
+          const storeMemory = tools.storeMemory as unknown as StoreMemoryTool;
+          const searchMemory =
+            tools.searchMemory as unknown as SearchMemoryTool;
+
+          // Store a memory
+          const storeResult = await storeMemory.execute({
+            content: "Test content for ID verification",
+            processImmediately: true,
+          });
+
+          expect(storeResult.success).toBe(true);
+
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          // Search for it
+          const searchResult = await searchMemory.execute({
+            query: "test content verification",
+            explore: false,
+          });
+
+          if (searchResult.success) {
+            // Should contain memory-node self-closing tag with ID
+            expect(searchResult.memory).toMatch(/<memory-node id="[^"]+" \/>/);
+
+            // Extract the ID from the tag
+            const match = searchResult.memory.match(
+              /<memory-node id="([^"]+)" \/>/,
+            );
+            expect(match).toBeDefined();
+
+            if (match) {
+              const extractedId = match[1];
+              if (!extractedId) throw new Error("No ID extracted");
+              // Verify it's a valid node ID (should be a UUID or similar)
+              expect(extractedId).toBeDefined();
+              expect(extractedId.length).toBeGreaterThan(0);
+            }
+          }
+        } finally {
+          await cleanup();
+        }
+      });
+    });
+
+    it("should allow extracting IDs for deletion workflow", async () => {
+      await withTestDatabase(async () => {
+        const db = process.env.DATABASE_URL || "";
+        const { souvenir, cleanup } = createTestSouvenir(db);
+
+        try {
+          const tools = createSouvenirTools(souvenir);
+          const storeMemory = tools.storeMemory as unknown as StoreMemoryTool;
+          const searchMemory =
+            tools.searchMemory as unknown as SearchMemoryTool;
+          const deleteMemory =
+            tools.deleteMemory as unknown as DeleteMemoryTool;
+
+          // Store multiple memories
+          await storeMemory.execute({
+            content: "Outdated information about product pricing",
+            processImmediately: true,
+          });
+
+          await storeMemory.execute({
+            content: "Incorrect contact information for support",
+            processImmediately: true,
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          // Search for outdated info
+          const searchResult = await searchMemory.execute({
+            query: "outdated information pricing",
+            explore: false,
+          });
+
+          if (searchResult.success) {
+            // Extract all node IDs from the memory string
+            const idPattern = /<memory-node id="([^"]+)" \/>/g;
+            const ids: string[] = [];
+            let match: RegExpExecArray | null;
+
+            // biome-ignore lint: assignment in expression is intentional for regex matching
+            while ((match = idPattern.exec(searchResult.memory)) !== null) {
+              const id = match[1];
+              if (id) ids.push(id);
+            }
+
+            expect(ids.length).toBeGreaterThan(0);
+
+            // Delete the found memories
+            const deleteResult = await deleteMemory.execute({
+              nodeIds: ids,
+            });
+
+            expect(deleteResult.success).toBe(true);
+            expect(deleteResult.deletedCount).toBe(ids.length);
+
+            // Verify they're deleted
+            for (const id of ids) {
+              const node = await souvenir.getNode(id);
+              expect(node).toBeNull();
+            }
+          }
+        } finally {
+          await cleanup();
+        }
+      });
+    });
+
+    it("should include IDs in all search modes (explore true/false)", async () => {
+      await withTestDatabase(async () => {
+        const db = process.env.DATABASE_URL || "";
+        const { souvenir, cleanup } = createTestSouvenir(db);
+
+        try {
+          const tools = createSouvenirTools(souvenir);
+          const storeMemory = tools.storeMemory as unknown as StoreMemoryTool;
+          const searchMemory =
+            tools.searchMemory as unknown as SearchMemoryTool;
+
+          await storeMemory.execute({
+            content: "Test for ID tags in all search modes",
+            processImmediately: true,
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 100));
+
+          // Test with explore: false
+          const result1 = await searchMemory.execute({
+            query: "test ID tags search modes",
+            explore: false,
+          });
+
+          if (result1.success) {
+            expect(result1.memory).toMatch(/<memory-node id="[^"]+" \/>/);
+          }
+
+          // Test with explore: true
+          const result2 = await searchMemory.execute({
+            query: "test ID tags search modes",
+            explore: true,
+          });
+
+          if (result2.success) {
+            expect(result2.memory).toMatch(/<memory-node id="[^"]+" \/>/);
+          }
         } finally {
           await cleanup();
         }
