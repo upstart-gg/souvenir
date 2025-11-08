@@ -63,7 +63,7 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:54322/souvenir_test?sslmode=disable
         run: |
-          bunx dbmate -- -d db/migrations -s db/schema.sql up
+          pnpm exec dbmate -- -d db/migrations -s db/schema.sql up
 
       - name: Run type check
         run: bun run typecheck
