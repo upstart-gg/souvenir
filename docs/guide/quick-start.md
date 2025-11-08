@@ -218,16 +218,16 @@ await chat("I love sushi", 'user-bob');
 ## What Gets Stored?
 
 The agent automatically stores:
-- ✅ User preferences ("I like dark mode")
-- ✅ Facts about the user ("My birthday is June 5")
-- ✅ Important context ("I'm working on Project X")
-- ✅ Decisions and agreements ("Let's meet next Tuesday")
-- ✅ Relationships ("Alice works with Bob")
+- User preferences ("I like dark mode")
+- Facts about the user ("My birthday is June 5")
+- Important context ("I'm working on Project X")
+- Decisions and agreements ("Let's meet next Tuesday")
+- Relationships ("Alice works with Bob")
 
 The agent does NOT store:
-- ❌ Trivial information ("Hello", "Thanks")
-- ❌ Questions without answers
-- ❌ Temporary context
+- Trivial information ("Hello", "Thanks")
+- Questions without answers
+- Temporary context
 
 ## Configuration
 
@@ -353,16 +353,16 @@ try {
 ## Troubleshooting
 
 ### Agent doesn't use memory tools
-- ✅ Check `maxSteps` is high enough (minimum 5)
-- ✅ Add guidance in system prompt
-- ✅ Verify `sessionId` is passed
+- Check `maxSteps` is high enough (minimum 5)
+- Add guidance in system prompt
+- Verify `sessionId` is passed
 
 ### Memories aren't retrieved
-- ✅ Check embedding dimensions match your model
-- ✅ Lower `minRelevanceScore` if too strict
-- ✅ Verify database migrations ran correctly
+- Check embedding dimensions match your model
+- Lower `minRelevanceScore` if too strict
+- Verify database migrations ran correctly
 
 ### Performance is slow
-- ✅ Entity/relationship extraction is async (runs in background)
-- ✅ Retrieval is fast (uses vector index)
-- ✅ Consider using `gpt-4o-mini` for processing
+- Entity/relationship extraction is async (runs in background)
+- Retrieval is fast (uses vector index)
+- Consider using `gpt-4o-mini` for processing

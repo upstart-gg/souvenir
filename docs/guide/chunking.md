@@ -70,16 +70,16 @@ const chunks = await chunkText(documentation, {
 ```
 
 **Pros**:
-- 📚 Respects natural text structure  
-- 🎯 Semantic boundaries (complete thoughts stay together)
-- 🔍 Better retrieval quality across all content types
-- 🤖 Handles agent use cases: short facts AND long context
-- ⚙️ Customizable rules for specific needs
+- Respects natural text structure  
+- Semantic boundaries (complete thoughts stay together)
+- Better retrieval quality across all content types
+- Handles agent use cases: short facts AND long context
+- Customizable rules for specific needs
 
 **Cons**:
-- 📐 Variable chunk sizes (less predictable)
-- 🐢 Slightly slower (~5ms vs ~1ms per 1000 chars)
-- 🤔 More configuration options (though defaults work well)
+- Variable chunk sizes (less predictable)
+- Slightly slower (~5ms vs ~1ms per 1000 chars)
+- More configuration options (though defaults work well)
 
 ---
 
@@ -117,15 +117,15 @@ const souvenir = new Souvenir({
 ```
 
 **Pros**:
-- ⚡ Fast and simple
-- 📏 Predictable chunk sizes (respects token limits)
-- 🔄 Overlap preserves context at boundaries
+- Fast and simple
+- Predictable chunk sizes (respects token limits)
+- Overlap preserves context at boundaries
 
 **Cons**:
-- ✂️ May split sentences and thoughts awkwardly
-- 📝 Ignores document structure
-- 🎯 Less semantic coherence
-- ❌ Can break context mid-sentence
+- May split sentences and thoughts awkwardly
+- Ignores document structure
+- Less semantic coherence
+- Can break context mid-sentence
 
 ---
 
@@ -133,7 +133,7 @@ const souvenir = new Souvenir({
 
 ### Use Recursive Mode (Default - Recommended)
 ```typescript
-// ✅ Best for most agent memory scenarios
+// Best for most agent memory scenarios
 const souvenir = new Souvenir({
   chunkingMode: 'recursive', // This is the default
   chunkSize: 1500,
@@ -141,22 +141,22 @@ const souvenir = new Souvenir({
 });
 
 // Handles everything agents save:
-// ✅ Short facts
+// Short facts
 await souvenir.add("User's name is Bob, allergic to shellfish");
 
-// ✅ Longer context
+// Longer context
 await souvenir.add("User is working on authentication feature using NextAuth.js with PostgreSQL adapter...");
 
-// ✅ Code snippets
+// Code snippets
 await souvenir.add(codeSnippet);
 
-// ✅ Documentation
+// Documentation
 await souvenir.add(documentation);
 ```
 
 ### Use Token Mode When:
 ```typescript
-// ⚠️ Only if you have specific requirements
+// Only if you have specific requirements
 const souvenir = new Souvenir({
   chunkingMode: 'token',
   chunkSize: 1000,
@@ -234,18 +234,18 @@ Overlap helps preserve context at chunk boundaries.
 Chunk 1: "The Eiffel Tower is located"
 Chunk 2: "in Paris, France."
 ```
-❌ If you retrieve only Chunk 2, you lose "Eiffel Tower" context
+If you retrieve only Chunk 2, you lose "Eiffel Tower" context
 
 **With overlap (chunkOverlap=10)**:
 ```
 Chunk 1: "The Eiffel Tower is located"
 Chunk 2: "Tower is located in Paris, France."
 ```
-✅ Chunk 2 now contains context about what is in Paris
+Chunk 2 now contains context about what is in Paris
 
 **Recommended overlap amounts**:
 - **Small (50-100)**: Storage-efficient, minimal context preservation
-- **Medium (200)**: ✅ Balanced (recommended default)
+- **Medium (200)**: Balanced (recommended default)
 - **Large (400-500)**: Maximum context, higher storage cost
 
 ---
