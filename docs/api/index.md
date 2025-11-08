@@ -18,7 +18,7 @@ const tools = createSouvenirTools(souvenir);
 // Use in your agent
 await generateText({
   model: openai('gpt-4'),
-  tools, // Provides: storeMemory, searchMemory
+  tools, // Provides: storeMemory, searchMemory, deleteMemory
   messages: [...]
 });
 ```
@@ -26,6 +26,7 @@ await generateText({
 **Available tools:**
 - `storeMemory` - Store important information in memory
 - `searchMemory` - Search past memories with configurable retrieval strategies
+- `deleteMemory` - Delete specific memories by node ID
 
 ### storeMemory
 
@@ -56,7 +57,7 @@ Search long-term memory for relevant information.
 ```typescript
 {
   success: boolean;
-  context: string;        // LLM-consumable formatted results
+  memory: string;         // LLM-consumable formatted results with <memory-node id="..."/> tags
   message: string;
   metadata: {
     query: string;
@@ -64,6 +65,58 @@ Search long-term memory for relevant information.
     resultCount: number;
   };
 }
+```
+
+**Memory Format:**
+Search results include node IDs for deletion:
+```
+# Memory Search Results
+
+Found 2 relevant memories:
+
+## Memory 1 (relevance: 95%)
+
+<memory-node id="node-uuid-123" />
+
+User prefers dark mode for all interfaces
+
+**Context**:
+- category: preference
+- timestamp: 2024-01-15
+```
+
+### deleteMemory
+
+Delete specific memories from long-term storage.
+
+**Parameters:**
+- `nodeIds` (string[]) - Array of memory node IDs to delete (extracted from search results)
+
+**Returns:**
+```typescript
+{
+  success: boolean;
+  deletedCount: number;
+  message: string;
+}
+```
+
+**Example:**
+```typescript
+// Search for outdated information
+const searchResult = await tools.searchMemory.execute({
+  query: 'old pricing information'
+});
+
+// Extract node IDs from the memory text
+const idPattern = /<memory-node id="([^"]+)" \/>/g;
+const nodeIds = Array.from(
+  searchResult.memory.matchAll(idPattern),
+  match => match[1]
+);
+
+// Delete the memories
+await tools.deleteMemory.execute({ nodeIds });
 ```
 
 ---

@@ -61,9 +61,21 @@ Later:
 "Where do I work?"
 
 // Agent automatically:
-// → Calls searchMemory tool
+// → Calls searchMemory tool (returns memory with <memory-node id="..."/> tags)
 // → Finds: Alice works_at Acme Corp
 // → Responds: "You work at Acme Corp"
+```
+
+And if needed:
+
+```typescript
+// User corrects outdated information
+"Actually, I changed jobs to Initech"
+
+// Agent automatically:
+// → Calls searchMemory to find old job info
+// → Calls deleteMemory with node IDs to remove outdated data
+// → Calls storeMemory to add new information
 ```
 
 ### 2. Knowledge Graph (Research-Based)
@@ -146,12 +158,12 @@ await generateText({
        ┌──────────┴──────────┐
        │                     │
        ▼                     ▼
- ┌─────────────┐      ┌─────────────┐
- │ storeMemory │      │searchMemory │
- │    Tool     │      │    Tool     │
- └──────┬──────┘      └──────┬──────┘
-        │                    │
-        │    ┌───────────────┘
+ ┌─────────────┐      ┌─────────────┐      ┌──────────────┐
+ │ storeMemory │      │searchMemory │      │ deleteMemory │
+ │    Tool     │      │    Tool     │      │     Tool     │
+ └──────┬──────┘      └──────┬──────┘      └──────┬───────┘
+        │                    │                    │
+        │    ┌───────────────┴────────────────────┘
         ▼    ▼
     ┌────────────────┐
     │   Souvenir     │

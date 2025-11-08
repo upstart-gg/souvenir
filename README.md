@@ -103,7 +103,7 @@ const result = await generateText({
 
 ## Souvenir pre-built tools
 
-Souvenir provides **2 pre-built tools** that work seamlessly with the Vercel AI SDK. This is the primary way to use Souvenir - through AI agents autonomously calling memory tools:
+Souvenir provides **3 pre-built tools** that work seamlessly with the Vercel AI SDK. This is the primary way to use Souvenir - through AI agents autonomously calling memory tools:
 
 ### Available Tools
 
@@ -115,7 +115,12 @@ Souvenir provides **2 pre-built tools** that work seamlessly with the Vercel AI 
 2. **`searchMemory`** - Search memory with automatic graph exploration
    - Searches using semantic similarity (vector search)
    - Optionally explores the knowledge graph for related context
-   - Returns LLM-consumable formatted results
+   - Returns LLM-consumable formatted results with `<memory-node id="..."/>` tags
+
+3. **`deleteMemory`** - Delete specific memories by node ID
+   - Remove outdated or incorrect information
+   - Node IDs can be extracted from `searchMemory` results
+   - Supports bulk deletion
 
 ## Core Concepts
 
