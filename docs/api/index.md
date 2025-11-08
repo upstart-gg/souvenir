@@ -113,9 +113,8 @@ Discover clusters of related memories.
 
 ---
 
-## Quick Links
+## See also
 
 - [Quick Start](/guide/quick-start) - Get started in 5 minutes
 - [Retrieval Strategies](/guide/retrieval-strategies) - Search methods
 - [Chunking](/guide/chunking) - Text chunking options
-- [Examples](/examples/) - See it in action

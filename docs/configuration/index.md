@@ -218,6 +218,4 @@ SOUVENIR_CHUNK_OVERLAP=200
 
 - [Quick Start](/guide/quick-start) - Get started
 - [Retrieval Strategies](/guide/retrieval-strategies) - Search options
-- [Examples](/examples/) - See configuration in action
 
-````

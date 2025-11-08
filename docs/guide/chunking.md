@@ -251,17 +251,6 @@ Chunk 2: "Tower is located in Paris, France."
 
 ---
 
-## Real-World Examples
-
-See the [Examples section](/examples/custom-chunking) for complete working examples:
-
-- **Chatbot Memory** - Token chunking for conversations
-- **Documentation Assistant** - Recursive chunking for docs
-- **Hybrid Agent** - Using both strategies
-- **Custom Tokenizer** - GPT-2 tokenizer integration
-
----
-
 ## Performance Considerations
 
 ### Token Mode
@@ -368,10 +357,9 @@ await souvenir.processAll({ sessionId, generateEmbeddings: true });
 
 ---
 
-## Next Steps
+## See Also
 
 - [ETL Pipeline](/guide/etl-pipeline) - How chunking fits in
 - [Quick Start](/guide/quick-start) - Configuration reference
 - [Retrieval Strategies](/guide/retrieval-strategies) - How chunks are retrieved
 
-````
