@@ -2,13 +2,13 @@
 set -e
 
 echo "Starting Docker..."
-npm docker:up
+npm run docker:up
 
 echo "Running tests..."
 npm run test:ci || TEST_RESULT=$?
 
 echo "Stopping Docker..."
-npm docker:down
+npm run docker:down
 
 if [ ! -z "$TEST_RESULT" ]; then
   exit $TEST_RESULT

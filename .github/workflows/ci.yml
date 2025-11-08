@@ -74,7 +74,7 @@ jobs:
         run: npm test
 
       - name: Run tests with coverage
-        run: npm test:coverage
+        run: npm run test:coverage
 
       - name: Publish preview packages
         if: github.event_name == 'pull_request'
