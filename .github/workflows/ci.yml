@@ -71,7 +71,7 @@ jobs:
         run: bun run lint
 
       - name: Run unit tests
-        run: npm test
+        run: npm test:ci
 
       - name: Run tests with coverage
         run: npm run test:coverage
