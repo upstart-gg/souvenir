@@ -1,4 +1,5 @@
-import { generateText } from "ai";
+import { generateObject } from "ai";
+import { z } from "zod";
 import type {
   ExtractedEntity,
   ExtractedRelationship,
@@ -8,41 +9,86 @@ import type {
 } from "../types.js";
 
 /**
+ * Zod schemas for structured extraction
+ */
+const ExtractedEntitySchema = z.object({
+  text: z.string().describe("The text of the entity"),
+  type: z
+    .string()
+    .describe(
+      "The type/category of the entity (e.g., person, organization, location, concept, event, date, technology, etc.)",
+    ),
+  metadata: z
+    .record(z.string(), z.unknown())
+    .optional()
+    .describe("Additional metadata about the entity"),
+});
+
+const EntityExtractionSchema = z.object({
+  entities: z
+    .array(ExtractedEntitySchema)
+    .describe("Array of extracted entities from the text"),
+});
+
+const ExtractedRelationshipSchema = z.object({
+  source: z.string().describe("The source entity text"),
+  target: z.string().describe("The target entity text"),
+  type: z
+    .string()
+    .describe(
+      "The type of relationship (e.g., related_to, part_of, caused_by, enables, requires, similar_to, etc.)",
+    ),
+  weight: z
+    .number()
+    .min(0)
+    .max(1)
+    .optional()
+    .describe("The strength of the relationship (0-1)"),
+});
+
+const RelationshipExtractionSchema = z.object({
+  relationships: z
+    .array(ExtractedRelationshipSchema)
+    .describe("Array of extracted relationships between entities"),
+});
+
+const SummarizationSchema = z.object({
+  summary: z.string().describe("A concise summary of the content"),
+});
+
+/**
  * Default prompt templates (from paper's optimization findings)
  */
 const DEFAULT_PROMPTS: Required<PromptTemplates> = {
-  entityExtraction: `Extract key entities from the following text. Return them as a JSON array of objects with "text", "type", and optional "metadata" fields.
+  entityExtraction: `Extract key entities from the following text. Identify important people, organizations, locations, concepts, events, dates, technologies, and other significant entities.
 
-Entity types can be: person, organization, location, concept, event, date, technology, or other.
+Be thorough but accurate. Only extract entities that are clearly mentioned or strongly implied in the text.
 
 Text:
-{content}
-
-Return only valid JSON, no additional text.`,
+{content}`,
 
   relationshipExtraction: `Given the following entities: {entities}
 
-Extract relationships between these entities from the text below. Return them as a JSON array of objects with "source", "target", "type", and optional "weight" (0-1) fields.
+Extract meaningful relationships between these entities from the text below. Focus on direct relationships that are explicitly stated or strongly implied.
 
-Relationship types can be: related_to, part_of, caused_by, enables, requires, similar_to, or other descriptive types.
+Types of relationships to consider: related_to, part_of, caused_by, enables, requires, similar_to, and other descriptive types.
+
+Assign a weight between 0 and 1 to indicate the strength of each relationship (1 = very strong, 0 = weak).
 
 Text:
-{content}
-
-Return only valid JSON, no additional text.`,
-
-  summarization: `Provide a concise summary of the following text in {maxLength} characters or less:
-
 {content}`,
 
-  qa: `Answer the following question using the provided context. Be concise and direct.
+  summarization: `Provide a concise summary of the following text. Keep it under {maxLength} characters while capturing the key information and main ideas.
+
+Text:
+{content}`,
+
+  qa: `Answer the following question using the provided context. Be concise and direct. If the answer cannot be determined from the context, say so clearly.
 
 Context:
 {context}
 
-Question: {question}
-
-Answer:`,
+Question: {question}`,
 };
 
 /**
@@ -52,7 +98,7 @@ export class SouvenirProcessor {
   private prompts: Required<PromptTemplates>;
 
   constructor(
-    private model: Parameters<typeof generateText>[0]["model"],
+    private model: Parameters<typeof generateObject>[0]["model"],
     customPrompts?: Partial<PromptTemplates>,
   ) {
     this.prompts = { ...DEFAULT_PROMPTS, ...customPrompts };
@@ -69,14 +115,14 @@ export class SouvenirProcessor {
     const prompt = promptTemplate.replace("{content}", content);
 
     try {
-      const { text } = await generateText({
+      const result = await generateObject({
         model: this.model,
+        schema: EntityExtractionSchema,
         prompt,
-        maxOutputTokens: 1000,
+        temperature: 0.3,
       });
 
-      const entities = JSON.parse(text);
-      return Array.isArray(entities) ? entities : [];
+      return result.object.entities;
     } catch (error) {
       console.error("Entity extraction failed:", error);
       return [];
@@ -102,14 +148,14 @@ export class SouvenirProcessor {
       .replace("{content}", content);
 
     try {
-      const { text } = await generateText({
+      const result = await generateObject({
         model: this.model,
+        schema: RelationshipExtractionSchema,
         prompt,
-        maxOutputTokens: 1000,
+        temperature: 0.3,
       });
 
-      const relationships = JSON.parse(text);
-      return Array.isArray(relationships) ? relationships : [];
+      return result.object.relationships;
     } catch (error) {
       console.error("Relationship extraction failed:", error);
       return [];
@@ -129,13 +175,14 @@ export class SouvenirProcessor {
       .replace("{content}", content);
 
     try {
-      const { text } = await generateText({
+      const result = await generateObject({
         model: this.model,
+        schema: SummarizationSchema,
         prompt,
-        maxOutputTokens: 100,
+        temperature: 0.5,
       });
 
-      return text.trim();
+      return result.object.summary;
     } catch (error) {
       console.error("Summary generation failed:", error);
       return `${content.slice(0, maxLength)}...`;
@@ -157,18 +204,17 @@ export class SouvenirProcessor {
 Identify key themes, entities, and relationships. Keep it under ${maxLength} characters.
 
 Content:
-${combinedContent}
-
-Summary:`;
+${combinedContent}`;
 
     try {
-      const { text } = await generateText({
+      const result = await generateObject({
         model: this.model,
+        schema: SummarizationSchema,
         prompt,
-        maxOutputTokens: 200,
+        temperature: 0.5,
       });
 
-      return text.trim();
+      return result.object.summary;
     } catch (error) {
       console.error("Multi-content summary generation failed:", error);
       // Fallback: concatenate first parts of each content
