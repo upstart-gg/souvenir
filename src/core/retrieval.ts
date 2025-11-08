@@ -3,8 +3,8 @@
  * Implements multiple retrieval approaches from the Cognee paper
  */
 
-import type { MemoryRepository } from "../db/repository.js";
-import type { GraphOperations } from "../graph/operations.js";
+import type { MemoryRepository } from "../db/repository.ts";
+import type { GraphOperations } from "../graph/operations.ts";
 import type {
   EmbeddingProvider,
   GraphRetrievalResult,
@@ -12,11 +12,11 @@ import type {
   MemoryRelationship,
   SearchOptions,
   SearchResult,
-} from "../types.js";
+} from "../types.ts";
 import {
   formatGraphTripletsForLLM,
   formatSummaryForLLM,
-} from "../utils/formatting.js";
+} from "../utils/formatting.ts";
 
 /**
  * Retrieval strategy implementations

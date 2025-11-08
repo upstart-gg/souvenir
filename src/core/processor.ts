@@ -6,7 +6,7 @@ import type {
   MemoryChunk,
   PromptTemplates,
   SouvenirProcessOptions,
-} from "../types.js";
+} from "../types.ts";
 
 /**
  * Zod schemas for structured extraction

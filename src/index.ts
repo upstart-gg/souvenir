@@ -7,18 +7,18 @@
  * @packageDocumentation
  */
 
-export { SouvenirProcessor } from "./core/processor.js";
-export { RetrievalStrategies } from "./core/retrieval.js";
-export { Souvenir } from "./core/souvenir.js";
-export { DatabaseClient } from "./db/client.js";
-export { MemoryRepository } from "./db/repository.js";
+export { SouvenirProcessor } from "./core/processor.ts";
+export { RetrievalStrategies } from "./core/retrieval.ts";
+export { Souvenir } from "./core/souvenir.ts";
+export { DatabaseClient } from "./db/client.ts";
+export { MemoryRepository } from "./db/repository.ts";
 export {
   AIEmbeddingProvider,
   MockEmbeddingProvider,
-} from "./embedding/provider.js";
-export { GraphOperations } from "./graph/operations.js";
+} from "./embedding/provider.ts";
+export { GraphOperations } from "./graph/operations.ts";
 
-export * from "./types.js";
+export * from "./types.ts";
 
 // Re-export utilities
 export {
@@ -28,11 +28,11 @@ export {
   type RecursiveChunkOptions,
   type RecursiveRulesConfig,
   type TokenChunkOptions,
-} from "./utils/chunking.js";
+} from "./utils/chunking.ts";
 export {
   formatGraphRetrievalForLLM,
   formatGraphTripletsForLLM,
   formatHybridContextForLLM,
   formatSearchResultsForLLM,
   formatSummaryForLLM,
-} from "./utils/formatting.js";
+} from "./utils/formatting.ts";

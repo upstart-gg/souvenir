@@ -1,5 +1,5 @@
 import { embed, embedMany } from "ai";
-import type { EmbeddingProvider } from "../types.js";
+import type { EmbeddingProvider } from "../types.ts";
 
 /**
  * Embedding provider using Vercel AI SDK

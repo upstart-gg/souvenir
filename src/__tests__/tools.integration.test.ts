@@ -3,10 +3,11 @@
  * Tests the Vercel AI SDK tools with real database operations
  */
 
-import { describe, expect, it } from "bun:test";
-import { Souvenir } from "../core/souvenir.js";
-import { createSouvenirTools } from "../tools/index.js";
-import { withTestDatabase } from "./setup.js";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { Souvenir } from "../core/souvenir.ts";
+import { createSouvenirTools } from "../tools/index.ts";
+import { withTestDatabase } from "./setup.ts";
 
 // Type definitions for tool execution
 interface StoreMemoryTool {
@@ -154,11 +155,11 @@ describe("Souvenir Tools Integration Tests", () => {
             metadata: { source: "test", type: "geography" },
           });
 
-          expect(result.success).toBe(true);
-          expect(result.chunkIds).toBeDefined();
-          expect(Array.isArray(result.chunkIds)).toBe(true);
-          expect(result.chunkIds.length).toBeGreaterThan(0);
-          expect(result.message).toContain("Stored");
+          assert.strictEqual(result.success, true);
+          assert(result.chunkIds !== undefined);
+          assert.strictEqual(Array.isArray(result.chunkIds), true);
+          assert(result.chunkIds.length > 0);
+          assert(result.message.includes("Stored"));
         } finally {
           await cleanup();
         }
@@ -185,16 +186,16 @@ describe("Souvenir Tools Integration Tests", () => {
             metadata,
           });
 
-          expect(result.success).toBe(true);
+          assert.strictEqual(result.success, true);
 
           // Verify metadata was stored
           await souvenir.processAll({ generateEmbeddings: true });
           for (const chunkId of result.chunkIds) {
             const stored = await souvenir.getNode(chunkId);
-            expect(stored).toBeDefined();
+            assert(stored !== undefined);
             if (stored) {
-              expect(stored.metadata.userId).toBe("user-123");
-              expect(stored.metadata.importance).toBe("high");
+              assert.strictEqual(stored.metadata.userId, "user-123");
+              assert.strictEqual(stored.metadata.importance, "high");
             }
             break; // Check first chunk only
           }
@@ -217,9 +218,9 @@ describe("Souvenir Tools Integration Tests", () => {
             content: "Simple fact without metadata",
           });
 
-          expect(result.success).toBe(true);
-          expect(result.chunkIds).toBeDefined();
-          expect(result.chunkIds.length).toBeGreaterThan(0);
+          assert.strictEqual(result.success, true);
+          assert(result.chunkIds !== undefined);
+          assert(result.chunkIds.length > 0);
         } finally {
           await cleanup();
         }
@@ -245,9 +246,9 @@ describe("Souvenir Tools Integration Tests", () => {
             metadata: { id: 2 },
           });
 
-          expect(result1.success).toBe(true);
-          expect(result2.success).toBe(true);
-          expect(result1.chunkIds).not.toEqual(result2.chunkIds);
+          assert.strictEqual(result1.success, true);
+          assert.strictEqual(result2.success, true);
+          assert.notDeepStrictEqual(result1.chunkIds, result2.chunkIds);
         } finally {
           await cleanup();
         }
@@ -268,8 +269,8 @@ describe("Souvenir Tools Integration Tests", () => {
             metadata: { testType: "background" },
           });
 
-          expect(result.success).toBe(true);
-          expect(result.chunkIds.length).toBeGreaterThan(0);
+          assert.strictEqual(result.success, true);
+          assert(result.chunkIds.length > 0);
 
           // Give time for background processing
           await new Promise((resolve) => setTimeout(resolve, 100));
@@ -278,7 +279,7 @@ describe("Souvenir Tools Integration Tests", () => {
           await souvenir.processAll({ generateEmbeddings: false });
           for (const chunkId of result.chunkIds) {
             const node = await souvenir.getNode(chunkId);
-            expect(node).toBeDefined();
+            assert(node !== undefined);
             break; // Check first node only
           }
         } finally {
@@ -306,7 +307,7 @@ describe("Souvenir Tools Integration Tests", () => {
             processImmediately: true,
           });
 
-          expect(storeResult.success).toBe(true);
+          assert.strictEqual(storeResult.success, true);
 
           // Give immediate processing time to complete
           await new Promise((resolve) => setTimeout(resolve, 100));
@@ -318,12 +319,12 @@ describe("Souvenir Tools Integration Tests", () => {
 
           // If search fails, at least check that the context exists (fallback worked)
           if (!result.success) {
-            expect(result.memory).toBeDefined();
-            expect(result.memory.length).toBeGreaterThan(0);
+            assert(result.memory !== undefined);
+            assert(result.memory.length > 0);
           } else {
-            expect(result.memory).toContain("Memory Search Results");
-            expect(result.message).toContain("memories");
-            expect(result.metadata?.explored).toBe(false);
+            assert(result.memory.includes("Memory Search Results"));
+            assert(result.message.includes("memories"));
+            assert.strictEqual(result.metadata?.explored, false);
           }
         } finally {
           await cleanup();
@@ -347,7 +348,7 @@ describe("Souvenir Tools Integration Tests", () => {
             processImmediately: true,
           });
 
-          expect(storeResult.success).toBe(true);
+          assert.strictEqual(storeResult.success, true);
 
           // Give immediate processing time to complete
           await new Promise((resolve) => setTimeout(resolve, 100));
@@ -357,9 +358,9 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: true,
           });
 
-          expect(result.memory).toBeDefined();
-          expect(result.memory).toContain("Memory Search Results");
-          expect(result.metadata?.explored).toBe(true);
+          assert(result.memory !== undefined);
+          assert(result.memory.includes("Memory Search Results"));
+          assert.strictEqual(result.metadata?.explored, true);
         } finally {
           await cleanup();
         }
@@ -381,8 +382,8 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: false,
           });
 
-          expect(result.success).toBe(false);
-          expect(result.memory).toContain("No relevant memories found");
+          assert.strictEqual(result.success, false);
+          assert(result.memory.includes("No relevant memories found"));
         } finally {
           await cleanup();
         }
@@ -413,8 +414,8 @@ describe("Souvenir Tools Integration Tests", () => {
             processImmediately: true,
           });
 
-          expect(result1.success).toBe(true);
-          expect(result2.success).toBe(true);
+          assert.strictEqual(result1.success, true);
+          assert.strictEqual(result2.success, true);
 
           // Give more time for processing
           await new Promise((resolve) => setTimeout(resolve, 200));
@@ -424,13 +425,13 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: true,
           });
 
-          expect(result.memory).toBeDefined();
+          assert(result.memory !== undefined);
           // If search found results, check for expected format
           if (result.success) {
-            expect(result.memory).toContain("# Memory Search Results");
-            expect(result.memory).toContain("## Memory");
-            expect(result.memory).toContain("relevance:");
-            expect(result.memory).toMatch(/\d+%/);
+            assert(result.memory.includes("# Memory Search Results"));
+            assert(result.memory.includes("## Memory"));
+            assert(result.memory.includes("relevance:"));
+            assert(/\d+%/.test(result.memory));
           }
         } finally {
           await cleanup();
@@ -459,7 +460,7 @@ describe("Souvenir Tools Integration Tests", () => {
             processImmediately: true,
           });
 
-          expect(storeResult.success).toBe(true);
+          assert.strictEqual(storeResult.success, true);
 
           // Give more time for processing
           await new Promise((resolve) => setTimeout(resolve, 200));
@@ -469,11 +470,11 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: true,
           });
 
-          expect(result.memory).toBeDefined();
+          assert(result.memory !== undefined);
           // If search found results, metadata might be included if available
           if (result.success) {
             // Just verify we got memory results, metadata display is optional
-            expect(result.memory.length).toBeGreaterThan(0);
+            assert(result.memory.length > 0);
           }
         } finally {
           await cleanup();
@@ -502,7 +503,7 @@ describe("Souvenir Tools Integration Tests", () => {
           });
 
           if (result.success) {
-            expect(result.metadata?.explored).toBe(true);
+            assert.strictEqual(result.metadata?.explored, true);
           }
         } finally {
           await cleanup();
@@ -532,7 +533,7 @@ describe("Souvenir Tools Integration Tests", () => {
             processImmediately: true,
           });
 
-          expect(storeResult.success).toBe(true);
+          assert.strictEqual(storeResult.success, true);
 
           // Give more time for processing
           await new Promise((resolve) => setTimeout(resolve, 200));
@@ -542,10 +543,10 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: false,
           });
 
-          expect(searchResult.memory).toBeDefined();
+          assert(searchResult.memory !== undefined);
           // If search found results, check for content
           if (searchResult.success) {
-            expect(searchResult.memory).toContain("Great Wall");
+            assert(searchResult.memory.includes("Great Wall"));
           }
         } finally {
           await cleanup();
@@ -586,10 +587,10 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: true,
           });
 
-          expect(result.memory).toBeDefined();
+          assert(result.memory !== undefined);
           // Check if search returned results or at least some context
           if (result.success) {
-            expect(result.metadata?.resultCount).toBeGreaterThan(0);
+            assert((result.metadata?.resultCount ?? 0) > 0);
           }
         } finally {
           await cleanup();
@@ -620,7 +621,7 @@ describe("Souvenir Tools Integration Tests", () => {
             metadata: { tags: ["special", "formatting"] },
           });
 
-          expect(storeResult.success).toBe(true);
+          assert.strictEqual(storeResult.success, true);
 
           await souvenir.processAll({ generateEmbeddings: true });
 
@@ -629,7 +630,7 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: false,
           });
 
-          expect(searchResult).toBeDefined();
+          assert(searchResult !== undefined);
         } finally {
           await cleanup();
         }
@@ -664,10 +665,10 @@ describe("Souvenir Tools Integration Tests", () => {
           });
 
           if (recallResult.success) {
-            expect(recallResult.memory).toContain("dark mode");
+            assert(recallResult.memory.includes("dark mode"));
           } else {
             // Fallback search should still have context
-            expect(recallResult.memory).toBeDefined();
+            assert(recallResult.memory !== undefined);
           }
 
           // Turn 3: Learn more
@@ -686,10 +687,10 @@ describe("Souvenir Tools Integration Tests", () => {
             explore: true,
           });
 
-          expect(typeof allPreferences.memory).toBe("string");
+          assert.strictEqual(typeof allPreferences.memory, "string");
           // Ensure at least one of the stored preference keywords appears when success=true
           if (allPreferences.success) {
-            expect(allPreferences.memory).toMatch(/dark mode|sans-serif/);
+            assert(/dark mode|sans-serif/.test(allPreferences.memory));
           }
         } finally {
           await cleanup();
@@ -713,8 +714,8 @@ describe("Souvenir Tools Integration Tests", () => {
             metadata: { type: "large" },
           });
 
-          expect(result.success).toBe(true);
-          expect(result.chunkIds.length).toBeGreaterThan(0);
+          assert.strictEqual(result.success, true);
+          assert(result.chunkIds.length > 0);
         } finally {
           await cleanup();
         }
@@ -737,8 +738,8 @@ describe("Souvenir Tools Integration Tests", () => {
             metadata: { languages: ["English", "Chinese", "Arabic", "Hebrew"] },
           });
 
-          expect(result.success).toBe(true);
-          expect(result.chunkIds.length).toBeGreaterThan(0);
+          assert.strictEqual(result.success, true);
+          assert(result.chunkIds.length > 0);
         } finally {
           await cleanup();
         }
@@ -771,9 +772,9 @@ describe("Souvenir Tools Integration Tests", () => {
             metadata: { userId: "B", sessionId: "session-2" },
           });
 
-          expect(result1.success).toBe(true);
-          expect(result2.success).toBe(true);
-          expect(result1.chunkIds).not.toEqual(result2.chunkIds);
+          assert.strictEqual(result1.success, true);
+          assert.strictEqual(result2.success, true);
+          assert.notDeepStrictEqual(result1.chunkIds, result2.chunkIds);
         } finally {
           await cleanup1();
           await cleanup2();
@@ -793,8 +794,8 @@ describe("Souvenir Tools Integration Tests", () => {
           const storeMemoryTool = tools.storeMemory as unknown;
 
           // Verify it's a tool object with execute method
-          expect(storeMemoryTool).toBeDefined();
-          expect(typeof storeMemoryTool === "object").toBe(true);
+          assert(storeMemoryTool !== undefined);
+          assert.strictEqual(typeof storeMemoryTool === "object", true);
         } finally {
           await cleanup();
         }
@@ -811,8 +812,8 @@ describe("Souvenir Tools Integration Tests", () => {
           const searchMemoryTool = tools.searchMemory as unknown;
 
           // Verify it's a tool object with execute method
-          expect(searchMemoryTool).toBeDefined();
-          expect(typeof searchMemoryTool === "object").toBe(true);
+          assert(searchMemoryTool !== undefined);
+          assert.strictEqual(typeof searchMemoryTool === "object", true);
         } finally {
           await cleanup();
         }
@@ -838,17 +839,17 @@ describe("Souvenir Tools Integration Tests", () => {
             processImmediately: true,
           });
 
-          expect(storeResult.success).toBe(true);
-          expect(storeResult.chunkIds.length).toBeGreaterThan(0);
+          assert.strictEqual(storeResult.success, true);
+          assert(storeResult.chunkIds.length > 0);
 
           const nodeId = storeResult.chunkIds[0];
           if (!nodeId) throw new Error("No node ID returned");
 
           // Verify node exists
           const nodeBefore = await souvenir.getNode(nodeId);
-          expect(nodeBefore).toBeDefined();
+          assert(nodeBefore !== undefined);
           if (nodeBefore) {
-            expect(nodeBefore.content.includes("deleted")).toBe(true);
+            assert.strictEqual(nodeBefore.content.includes("deleted"), true);
           }
 
           // Delete the node
@@ -856,13 +857,13 @@ describe("Souvenir Tools Integration Tests", () => {
             nodeIds: [nodeId],
           });
 
-          expect(deleteResult.success).toBe(true);
-          expect(deleteResult.deletedCount).toBe(1);
-          expect(deleteResult.message).toContain("Deleted 1");
+          assert.strictEqual(deleteResult.success, true);
+          assert.strictEqual(deleteResult.deletedCount, 1);
+          assert(deleteResult.message.includes("Deleted 1"));
 
           // Verify node is gone
           const nodeAfter = await souvenir.getNode(nodeId);
-          expect(nodeAfter).toBeNull();
+          assert(nodeAfter === null);
         } finally {
           await cleanup();
         }
@@ -906,22 +907,22 @@ describe("Souvenir Tools Integration Tests", () => {
             nodeIds,
           });
 
-          expect(deleteResult.success).toBe(true);
-          expect(deleteResult.deletedCount).toBe(2);
+          assert.strictEqual(deleteResult.success, true);
+          assert.strictEqual(deleteResult.deletedCount, 2);
 
           // Verify deleted nodes are gone
           const node1 = await souvenir.getNode(id1);
           const node2 = await souvenir.getNode(id2);
-          expect(node1).toBeNull();
-          expect(node2).toBeNull();
+          assert(node1 === null);
+          assert(node2 === null);
 
           // Verify third node still exists
           const nodeId3 = result3.chunkIds[0];
           if (!nodeId3) throw new Error("No node ID for result3");
           const node3 = await souvenir.getNode(nodeId3);
-          expect(node3).toBeDefined();
+          assert(node3 !== undefined);
           if (node3) {
-            expect(node3.content.includes("keep")).toBe(true);
+            assert.strictEqual(node3.content.includes("keep"), true);
           }
         } finally {
           await cleanup();
@@ -943,9 +944,9 @@ describe("Souvenir Tools Integration Tests", () => {
             nodeIds: [],
           });
 
-          expect(result.success).toBe(false);
-          expect(result.deletedCount).toBe(0);
-          expect(result.message).toContain("No node IDs");
+          assert.strictEqual(result.success, false);
+          assert.strictEqual(result.deletedCount, 0);
+          assert(result.message.includes("No node IDs"));
         } finally {
           await cleanup();
         }
@@ -969,9 +970,9 @@ describe("Souvenir Tools Integration Tests", () => {
           });
 
           // Should catch the error and return failure
-          expect(result.success).toBe(false);
-          expect(result.deletedCount).toBe(0);
-          expect(result.message).toContain("Failed");
+          assert.strictEqual(result.success, false);
+          assert.strictEqual(result.deletedCount, 0);
+          assert(result.message.includes("Failed"));
         } finally {
           await cleanup();
         }
@@ -997,7 +998,7 @@ describe("Souvenir Tools Integration Tests", () => {
             processImmediately: true,
           });
 
-          expect(storeResult.success).toBe(true);
+          assert.strictEqual(storeResult.success, true);
 
           await new Promise((resolve) => setTimeout(resolve, 100));
 
@@ -1009,20 +1010,20 @@ describe("Souvenir Tools Integration Tests", () => {
 
           if (searchResult.success) {
             // Should contain memory-node self-closing tag with ID
-            expect(searchResult.memory).toMatch(/<memory-node id="[^"]+" \/>/);
+            assert(/<memory-node id="[^"]+" \/>/.test(searchResult.memory));
 
             // Extract the ID from the tag
             const match = searchResult.memory.match(
               /<memory-node id="([^"]+)" \/>/,
             );
-            expect(match).toBeDefined();
+            assert(match !== undefined);
 
             if (match) {
               const extractedId = match[1];
               if (!extractedId) throw new Error("No ID extracted");
               // Verify it's a valid node ID (should be a UUID or similar)
-              expect(extractedId).toBeDefined();
-              expect(extractedId.length).toBeGreaterThan(0);
+              assert(extractedId !== undefined);
+              assert(extractedId.length > 0);
             }
           }
         } finally {
@@ -1075,20 +1076,20 @@ describe("Souvenir Tools Integration Tests", () => {
               if (id) ids.push(id);
             }
 
-            expect(ids.length).toBeGreaterThan(0);
+            assert(ids.length > 0);
 
             // Delete the found memories
             const deleteResult = await deleteMemory.execute({
               nodeIds: ids,
             });
 
-            expect(deleteResult.success).toBe(true);
-            expect(deleteResult.deletedCount).toBe(ids.length);
+            assert.strictEqual(deleteResult.success, true);
+            assert.strictEqual(deleteResult.deletedCount, ids.length);
 
             // Verify they're deleted
             for (const id of ids) {
               const node = await souvenir.getNode(id);
-              expect(node).toBeNull();
+              assert(node === null);
             }
           }
         } finally {
@@ -1122,7 +1123,7 @@ describe("Souvenir Tools Integration Tests", () => {
           });
 
           if (result1.success) {
-            expect(result1.memory).toMatch(/<memory-node id="[^"]+" \/>/);
+            assert(/<memory-node id="[^"]+" \/>/.test(result1.memory));
           }
 
           // Test with explore: true
@@ -1132,7 +1133,7 @@ describe("Souvenir Tools Integration Tests", () => {
           });
 
           if (result2.success) {
-            expect(result2.memory).toMatch(/<memory-node id="[^"]+" \/>/);
+            assert(/<memory-node id="[^"]+" \/>/.test(result2.memory));
           }
         } finally {
           await cleanup();

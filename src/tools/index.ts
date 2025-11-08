@@ -4,7 +4,7 @@
 
 import { tool } from "ai";
 import { z } from "zod";
-import type { Souvenir } from "../core/souvenir.js";
+import type { Souvenir } from "../core/souvenir.ts";
 
 /**
  * Create memory tools for use with Vercel AI SDK

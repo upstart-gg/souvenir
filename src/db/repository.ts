@@ -4,8 +4,8 @@ import type {
   MemoryRelationship,
   MemorySession,
   SearchResult,
-} from "../types.js";
-import type { DatabaseClient } from "./client.js";
+} from "../types.ts";
+import type { DatabaseClient } from "./client.ts";
 
 /**
  * Repository for memory operations using postgres package

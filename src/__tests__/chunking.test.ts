@@ -1,5 +1,6 @@
-import { describe, expect, test } from "bun:test";
-import { calculateChunkSize, chunkText } from "../utils/chunking.js";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
+import { calculateChunkSize, chunkText } from "../utils/chunking.ts";
 
 describe("chunking", () => {
   describe("chunkText", () => {
@@ -11,8 +12,8 @@ describe("chunking", () => {
         chunkOverlap: 100,
       });
 
-      expect(chunks.length).toBeGreaterThan(1);
-      expect(chunks[0]?.length).toBeLessThanOrEqual(500);
+      assert(chunks.length > 1);
+      assert((chunks[0]?.length ?? 0) <= 500);
     });
 
     test("should create overlapping chunks", async () => {
@@ -26,7 +27,7 @@ describe("chunking", () => {
 
       // Should have overlap between chunks
       if (chunks.length > 1) {
-        expect(chunks.length).toBeGreaterThan(0);
+        assert(chunks.length > 0);
       }
     });
 
@@ -38,8 +39,8 @@ describe("chunking", () => {
         chunkOverlap: 200,
       });
 
-      expect(chunks).toHaveLength(1);
-      expect(chunks[0]).toBe(text);
+      assert.equal(chunks.length, 1);
+      assert.equal(chunks[0], text);
     });
 
     test("should work with recursive mode", async () => {
@@ -49,7 +50,7 @@ describe("chunking", () => {
         chunkSize: 20,
       });
 
-      expect(chunks.length).toBeGreaterThan(0);
+      assert(chunks.length > 0);
     });
 
     test("should support custom tokenizer", async () => {
@@ -60,7 +61,7 @@ describe("chunking", () => {
         tokenizer: "character",
       });
 
-      expect(chunks.length).toBeGreaterThan(0);
+      assert(chunks.length > 0);
     });
 
     test("should support minCharactersPerChunk in recursive mode", async () => {
@@ -71,17 +72,17 @@ describe("chunking", () => {
         minCharactersPerChunk: 10,
       });
 
-      expect(chunks.length).toBeGreaterThan(0);
+      assert(chunks.length > 0);
     });
   });
 
   describe("calculateChunkSize", () => {
     test("should return correct chunk sizes for different content types", () => {
-      expect(calculateChunkSize("code")).toBe(500);
-      expect(calculateChunkSize("documentation")).toBe(1000);
-      expect(calculateChunkSize("conversation")).toBe(800);
-      expect(calculateChunkSize("article")).toBe(1200);
-      expect(calculateChunkSize("unknown")).toBe(1000);
+      assert.equal(calculateChunkSize("code"), 500);
+      assert.equal(calculateChunkSize("documentation"), 1000);
+      assert.equal(calculateChunkSize("conversation"), 800);
+      assert.equal(calculateChunkSize("article"), 1200);
+      assert.equal(calculateChunkSize("unknown"), 1000);
     });
   });
 });

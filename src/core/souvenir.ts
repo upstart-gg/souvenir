@@ -1,6 +1,6 @@
-import { DatabaseClient } from "../db/client.js";
-import { MemoryRepository } from "../db/repository.js";
-import { GraphOperations } from "../graph/operations.js";
+import { DatabaseClient } from "../db/client.ts";
+import { MemoryRepository } from "../db/repository.ts";
+import { GraphOperations } from "../graph/operations.ts";
 import type {
   AddOptions,
   EmbeddingProvider,
@@ -15,14 +15,14 @@ import type {
   SouvenirProcessOptions,
   SummaryMetadata,
   TraversalOptions,
-} from "../types.js";
-import { chunkText } from "../utils/chunking.js";
+} from "../types.ts";
+import { chunkText } from "../utils/chunking.ts";
 import {
   formatGraphRetrievalForLLM,
   formatHybridContextForLLM,
-} from "../utils/formatting.js";
-import { SouvenirProcessor } from "./processor.js";
-import { RetrievalStrategies } from "./retrieval.js";
+} from "../utils/formatting.ts";
+import { SouvenirProcessor } from "./processor.ts";
+import { RetrievalStrategies } from "./retrieval.ts";
 
 /**
  * Main Souvenir class - Memory management for AI agents
