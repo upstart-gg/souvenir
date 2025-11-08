@@ -51,25 +51,25 @@ export default defineConfig({
           ],
         },
         {
-          text: 'How It Works',
+          text: 'Core Concepts',
           items: [
-            { text: 'Knowledge Graphs', link: '/guide/knowledge-graphs' },
+            { text: 'ETL Pipeline', link: '/guide/etl-pipeline' },
             { text: 'Retrieval Strategies', link: '/guide/retrieval-strategies' },
+            { text: 'Chunking', link: '/guide/chunking' },
+          ],
+        },
+        {
+          text: 'Development',
+          items: [
+            { text: 'Testing', link: '/guide/testing' },
           ],
         },
       ],
       '/api/': [
         {
-          text: 'Tools (Main API)',
+          text: 'API Reference',
           items: [
-            { text: 'Memory Tools', link: '/api/tools' },
-          ],
-        },
-        {
-          text: 'Configuration',
-          items: [
-            { text: 'Souvenir Options', link: '/api/souvenir' },
-            { text: 'Type Reference', link: '/api/types' },
+            { text: 'Overview', link: '/api/' },
           ],
         },
       ],
@@ -78,9 +78,7 @@ export default defineConfig({
           text: 'Examples',
           items: [
             { text: 'Overview', link: '/examples/' },
-            { text: 'With Vercel AI SDK', link: '/examples/vercel-ai-sdk' },
-            { text: 'Streaming Responses', link: '/examples/streaming' },
-            { text: 'Multi-User Chat', link: '/examples/multi-user' },
+            { text: 'Custom Chunking', link: '/examples/custom-chunking' },
           ],
         },
       ],
@@ -89,8 +87,6 @@ export default defineConfig({
           text: 'Configuration',
           items: [
             { text: 'Overview', link: '/configuration/' },
-            { text: 'Database Setup', link: '/configuration/database' },
-            { text: 'Embedding Providers', link: '/configuration/embeddings' },
           ],
         },
       ],

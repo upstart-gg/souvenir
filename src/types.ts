@@ -13,6 +13,9 @@ export const SouvenirConfigSchema: ReturnType<typeof z.object> = z.object({
   chunkingMode: z.enum(["token", "recursive"]).default("recursive"),
   chunkingTokenizer: z.string().optional(),
   minCharactersPerChunk: z.number().optional(),
+  autoProcessing: z.boolean().default(true),
+  autoProcessDelay: z.number().default(1000),
+  autoProcessBatchSize: z.number().default(10),
 });
 
 export type SouvenirConfig = z.infer<typeof SouvenirConfigSchema>;

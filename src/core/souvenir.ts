@@ -39,6 +39,8 @@ export class Souvenir {
   private embedding?: EmbeddingProvider;
   private embeddingValidated: boolean = false;
   private sessionId: string;
+  private processingTimer?: ReturnType<typeof setTimeout>;
+  private isProcessing: boolean = false;
 
   constructor(
     private config: SouvenirConfig,
@@ -169,7 +171,67 @@ export class Souvenir {
 
     // Debug logging removed
 
+    // Schedule auto-processing if enabled
+    if (this.config["autoProcessing"] as boolean) {
+      this.scheduleProcessing();
+    }
+
     return chunkIds;
+  }
+
+  /**
+   * Schedule background processing with debouncing
+   * Multiple rapid add() calls will be batched together
+   */
+  private scheduleProcessing(): void {
+    // Clear existing timer if any
+    if (this.processingTimer) {
+      clearTimeout(this.processingTimer);
+    }
+
+    // Schedule new processing
+    const delay = this.config["autoProcessDelay"] as number;
+    this.processingTimer = setTimeout(() => {
+      this.processAll({
+        generateEmbeddings: true,
+        generateSummaries: false, // Can be configured
+      }).catch((error) => {
+        console.error("Auto-processing failed:", error);
+      });
+    }, delay);
+  }
+
+  /**
+   * Cancel any scheduled processing
+   */
+  private cancelScheduledProcessing(): void {
+    if (this.processingTimer) {
+      clearTimeout(this.processingTimer);
+      this.processingTimer = undefined;
+    }
+  }
+
+  /**
+   * Force immediate processing of all pending chunks
+   * Cancels any scheduled processing and processes immediately
+   */
+  async forceMemoryProcessing(
+    options: SouvenirProcessOptions = {},
+  ): Promise<void> {
+    // Cancel scheduled processing
+    this.cancelScheduledProcessing();
+
+    // Wait if already processing
+    while (this.isProcessing) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
+    // Process all pending chunks
+    await this.processAll({
+      generateEmbeddings: true,
+      generateSummaries: false,
+      ...options,
+    });
   }
 
   /**
@@ -180,39 +242,50 @@ export class Souvenir {
   async processAll(options: SouvenirProcessOptions = {}): Promise<void> {
     const { generateEmbeddings = true, generateSummaries = false } = options;
 
-    const chunks = await this.repository.getUnprocessedChunks(this.sessionId);
-
-    // Debug logging removed
-
-    if (chunks.length === 0) {
+    // Prevent concurrent processing
+    if (this.isProcessing) {
       return;
     }
 
-    // Process chunks in batches
-    const batchSize = 10;
-    const processedNodeIds: string[] = [];
+    this.isProcessing = true;
 
-    for (let i = 0; i < chunks.length; i += batchSize) {
-      const batch = chunks.slice(i, i + batchSize);
-      const results = await Promise.all(
-        batch.map((chunk) =>
-          this.processChunk(chunk, { ...options, generateEmbeddings }),
-        ),
-      );
-      // Collect node IDs for summary generation
-      processedNodeIds.push(
-        ...(results.filter((id) => id !== null) as string[]),
-      );
-    }
+    try {
+      const chunks = await this.repository.getUnprocessedChunks(this.sessionId);
 
-    // Create relationships between nodes in session
-    if (this.processor) {
-      await this.createSessionRelationships(this.sessionId);
-    }
+      // Debug logging removed
 
-    // Generate session summary if requested (per paper)
-    if (generateSummaries && this.processor && processedNodeIds.length > 0) {
-      await this.generateSessionSummary(this.sessionId, processedNodeIds);
+      if (chunks.length === 0) {
+        return;
+      }
+
+      // Process chunks in batches
+      const batchSize = this.config["autoProcessBatchSize"] as number;
+      const processedNodeIds: string[] = [];
+
+      for (let i = 0; i < chunks.length; i += batchSize) {
+        const batch = chunks.slice(i, i + batchSize);
+        const results = await Promise.all(
+          batch.map((chunk) =>
+            this.processChunk(chunk, { ...options, generateEmbeddings }),
+          ),
+        );
+        // Collect node IDs for summary generation
+        processedNodeIds.push(
+          ...(results.filter((id) => id !== null) as string[]),
+        );
+      }
+
+      // Create relationships between nodes in session
+      if (this.processor) {
+        await this.createSessionRelationships(this.sessionId);
+      }
+
+      // Generate session summary if requested (per paper)
+      if (generateSummaries && this.processor && processedNodeIds.length > 0) {
+        await this.generateSessionSummary(this.sessionId, processedNodeIds);
+      }
+    } finally {
+      this.isProcessing = false;
     }
   }
 
@@ -611,6 +684,14 @@ export class Souvenir {
   }
 
   async close(): Promise<void> {
+    // Cancel any scheduled processing
+    this.cancelScheduledProcessing();
+
+    // Wait for any in-progress processing to complete
+    while (this.isProcessing) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+
     await this.db.close();
   }
 

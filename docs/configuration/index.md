@@ -22,6 +22,11 @@ const souvenir = new Souvenir({
   // Search defaults
   minRelevanceScore: 0.7,
   maxResults: 10,
+
+  // Auto-processing (batched background processing)
+  autoProcessing: true,        // Enable auto-processing (default: true)
+  autoProcessDelay: 1000,      // Debounce delay in ms (default: 1000)
+  autoProcessBatchSize: 10,    // Chunks per batch (default: 10)
 });
 ```
 
@@ -58,6 +63,51 @@ const souvenir = new Souvenir({
 
 - **minRelevanceScore** (default: 0.7): Minimum similarity threshold
 - **maxResults** (default: 10): Maximum results per search
+
+### Auto-Processing
+
+Souvenir uses timer-based batching to optimize LLM API calls and processing efficiency:
+
+- **autoProcessing** (default: true): Enable/disable automatic batched processing
+  - When enabled, multiple rapid `add()` calls are automatically batched together
+  - Processing is scheduled after a configurable delay period
+  - Set to `false` for manual processing control with `processAll()`
+
+- **autoProcessDelay** (default: 1000): Debounce delay in milliseconds
+  - Each `add()` call resets this timer
+  - When the timer expires, all pending chunks are processed in one batch
+  - Increase for more aggressive batching (e.g., 5000ms)
+  - Decrease for faster processing (e.g., 500ms)
+
+- **autoProcessBatchSize** (default: 10): Number of chunks to process per batch
+  - Larger batches are more efficient but take longer
+  - Smaller batches provide faster individual processing
+
+**Example: Disable auto-processing**
+```typescript
+const souvenir = new Souvenir({
+  databaseUrl: process.env.DATABASE_URL!,
+  autoProcessing: false,
+});
+
+// Manually control processing
+await souvenir.add('Content 1...');
+await souvenir.add('Content 2...');
+await souvenir.processAll({ generateEmbeddings: true });
+```
+
+**Example: Force immediate processing**
+```typescript
+await souvenir.add('Important data...');
+
+// Force processing before searching
+await souvenir.forceMemoryProcessing({
+  generateEmbeddings: true,
+  generateSummaries: false,
+});
+
+const results = await souvenir.search('query');
+```
 
 ## Advanced Options
 

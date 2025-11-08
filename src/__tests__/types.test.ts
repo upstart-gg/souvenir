@@ -15,7 +15,13 @@ describe("types", () => {
       };
 
       const result = SouvenirConfigSchema.parse(config);
-      expect(result).toEqual(config);
+      // Schema adds defaults for autoProcessing fields
+      expect(result).toEqual({
+        ...config,
+        autoProcessing: true,
+        autoProcessDelay: 1000,
+        autoProcessBatchSize: 10,
+      });
     });
 
     test("should apply defaults", () => {
@@ -29,6 +35,9 @@ describe("types", () => {
       expect(result.chunkOverlap).toBe(200);
       expect(result.minRelevanceScore).toBe(0.7);
       expect(result.maxResults).toBe(10);
+      expect(result.autoProcessing).toBe(true);
+      expect(result.autoProcessDelay).toBe(1000);
+      expect(result.autoProcessBatchSize).toBe(10);
     });
 
     test("should validate minRelevanceScore range", () => {
