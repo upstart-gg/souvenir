@@ -175,4 +175,4 @@ Souvenir's architecture is inspired by research on optimizing knowledge graphs f
 
 ---
 
-Built with ❤️ using [Vercel AI SDK](https://sdk.vercel.ai), [Bun](https://bun.sh), and [PostgreSQL](https://www.postgresql.org)
+Built with ❤️ and ☕ at [Upstart](https://upstart.gg)
