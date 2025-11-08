@@ -27,7 +27,7 @@ function getTestDatabaseUrl(): string {
   }
 
   // Fallback for docker-compose setup (runs on host, connects to localhost:54322)
-  return "postgresql://postgres:postgres@localhost:54322/souvenir_test";
+  return "postgresql://postgres:postgres@localhost:54322/souvenir_test?sslmode=disable";
 }
 
 /**

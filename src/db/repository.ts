@@ -258,6 +258,14 @@ export class MemoryRepository {
 
   async getNodesInSession(sessionId: string): Promise<MemoryNode[]> {
     try {
+      // Validate sessionId is a proper UUID before querying
+      const uuidRegex =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      if (!uuidRegex.test(sessionId)) {
+        console.error(`Invalid session ID format: ${sessionId}`);
+        return [];
+      }
+
       const rows = await this.db.query`
         SELECT mn.* FROM memory_nodes mn
         JOIN session_nodes sn ON mn.id = sn.node_id
@@ -303,11 +311,6 @@ export class MemoryRepository {
 
     if (sessionId) {
       // Filter by sessionId stored in chunk metadata
-      // Debug logging removed
-
-      // First, check ALL unprocessed chunks to see what's in the database
-      // Removed unused variable for clarity
-
       rows = await this.db.query`
         SELECT * FROM memory_chunks
         WHERE processed = FALSE
@@ -315,7 +318,6 @@ export class MemoryRepository {
         ORDER BY created_at ASC
         LIMIT ${limit}
       `;
-      // Debug logging removed
     } else {
       // Get all unprocessed chunks
       rows = await this.db.query`

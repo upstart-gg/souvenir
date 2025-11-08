@@ -252,14 +252,13 @@ export class Souvenir {
     try {
       const chunks = await this.repository.getUnprocessedChunks(this.sessionId);
 
-      // Debug logging removed
-
       if (chunks.length === 0) {
         return;
       }
 
       // Process chunks in batches
-      const batchSize = this.config["autoProcessBatchSize"] as number;
+      const batchSize =
+        (this.config["autoProcessBatchSize"] as number | undefined) ?? 10;
       const processedNodeIds: string[] = [];
 
       for (let i = 0; i < chunks.length; i += batchSize) {
@@ -309,9 +308,6 @@ export class Souvenir {
     let embedding: number[] | null = null;
     if (generateEmbeddings && this.embedding) {
       embedding = await this.embedding.embed(chunk.content);
-      // Debug logging removed
-    } else {
-      // Debug logging removed
     }
 
     // Create memory node for the chunk itself
