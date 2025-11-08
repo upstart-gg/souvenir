@@ -33,12 +33,6 @@ bun test
 # Run tests in CI mode (requires DATABASE_URL)
 bun run test:ci
 
-# Watch mode
-bun run test:watch
-
-# Coverage
-bun run test:coverage
-
 # Run a single test file
 bun test src/__tests__/chunking.test.ts
 ```

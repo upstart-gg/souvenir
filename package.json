@@ -27,7 +27,6 @@
     "build": "bunup",
     "test": "bash scripts/test.sh",
     "test:ci": "DATABASE_URL='postgresql://postgres:postgres@localhost:54322/souvenir_test' node --experimental-transform-types --import ./src/__tests__/setup.ts ./src/__tests__/all-tests.ts",
-    "test:coverage": "DATABASE_URL='postgresql://postgres:postgres@localhost:54322/souvenir_test' node --experimental-transform-types --import ./src/__tests__/setup.ts ./src/__tests__/all-tests.ts",
     "test:watch": "DATABASE_URL='postgresql://postgres:postgres@localhost:54322/souvenir_test' node --experimental-transform-types --import ./src/__tests__/setup.ts --watch ./src/__tests__/all-tests.ts",
     "docker:up": "docker-compose up -d && sleep 10",
     "docker:down": "docker-compose down",

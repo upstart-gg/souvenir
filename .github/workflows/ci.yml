@@ -73,9 +73,6 @@ jobs:
       - name: Run unit tests
         run: npm run test:ci
 
-      - name: Run tests with coverage
-        run: npm run test:coverage
-
       - name: Publish preview packages
         if: github.event_name == 'pull_request'
         run: bunx pkg-pr-new publish --no-template --bun
