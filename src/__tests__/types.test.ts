@@ -1,5 +1,6 @@
-import { describe, expect, test } from "bun:test";
-import { SouvenirConfigSchema } from "../types.js";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
+import { SouvenirConfigSchema } from "../types.ts";
 
 describe("types", () => {
   describe("SouvenirConfigSchema", () => {
@@ -16,7 +17,7 @@ describe("types", () => {
 
       const result = SouvenirConfigSchema.parse(config);
       // Schema adds defaults for autoProcessing fields
-      expect(result).toEqual({
+      assert.deepEqual(result, {
         ...config,
         autoProcessing: true,
         autoProcessDelay: 1000,
@@ -30,14 +31,14 @@ describe("types", () => {
       };
 
       const result = SouvenirConfigSchema.parse(config);
-      expect(result.embeddingDimensions).toBe(1536);
-      expect(result.chunkSize).toBe(1000);
-      expect(result.chunkOverlap).toBe(200);
-      expect(result.minRelevanceScore).toBe(0.7);
-      expect(result.maxResults).toBe(10);
-      expect(result.autoProcessing).toBe(true);
-      expect(result.autoProcessDelay).toBe(1000);
-      expect(result.autoProcessBatchSize).toBe(10);
+      assert.equal(result.embeddingDimensions, 1536);
+      assert.equal(result.chunkSize, 1000);
+      assert.equal(result.chunkOverlap, 200);
+      assert.equal(result.minRelevanceScore, 0.7);
+      assert.equal(result.maxResults, 10);
+      assert.equal(result.autoProcessing, true);
+      assert.equal(result.autoProcessDelay, 1000);
+      assert.equal(result.autoProcessBatchSize, 10);
     });
 
     test("should validate minRelevanceScore range", () => {
@@ -46,7 +47,7 @@ describe("types", () => {
         minRelevanceScore: 1.5,
       };
 
-      expect(() => SouvenirConfigSchema.parse(invalidConfig)).toThrow();
+      assert.throws(() => SouvenirConfigSchema.parse(invalidConfig));
     });
 
     test("should require valid URL", () => {
@@ -54,7 +55,7 @@ describe("types", () => {
         databaseUrl: "not-a-url",
       };
 
-      expect(() => SouvenirConfigSchema.parse(invalidConfig)).toThrow();
+      assert.throws(() => SouvenirConfigSchema.parse(invalidConfig));
     });
   });
 });

@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { Souvenir } from "../core/souvenir.js";
-import type { EmbeddingProvider } from "../types.js";
-import { withTestDatabase } from "./setup.js";
+import assert from "node:assert/strict";
+import { afterEach, beforeEach, describe, it } from "node:test";
+import { Souvenir } from "../core/souvenir.ts";
+import type { EmbeddingProvider } from "../types.ts";
+import { withTestDatabase } from "./setup.ts";
 
 /**
  * Mock embedding provider for testing
@@ -94,12 +95,12 @@ describe("Retrieval Strategies Integration Tests", () => {
           limit: 5,
         });
 
-        expect(Array.isArray(results)).toBe(true);
-        expect(results.length).toBeGreaterThanOrEqual(0);
+        assert.strictEqual(Array.isArray(results), true);
+        assert(results.length >= 0);
 
         if (results.length > 0 && results[0]) {
-          expect(results[0].score).toBeLessThanOrEqual(1);
-          expect(results[0].score).toBeGreaterThanOrEqual(0);
+          assert(results[0].score <= 1);
+          assert(results[0].score >= 0);
         }
       });
     });
@@ -118,7 +119,7 @@ describe("Retrieval Strategies Integration Tests", () => {
         });
 
         if (results.length > 1 && results[0] && results[1]) {
-          expect(results[0].score).toBeGreaterThanOrEqual(results[1].score);
+          assert(results[0].score >= results[1].score);
         }
       });
     });
@@ -142,7 +143,7 @@ describe("Retrieval Strategies Integration Tests", () => {
           limit: 5,
         });
 
-        expect(Array.isArray(results)).toBe(true);
+        assert.strictEqual(Array.isArray(results), true);
         // Graph strategy may return different results based on connectivity
       });
     });
@@ -166,7 +167,7 @@ describe("Retrieval Strategies Integration Tests", () => {
           limit: 5,
         });
 
-        expect(Array.isArray(results)).toBe(true);
+        assert.strictEqual(Array.isArray(results), true);
       });
     });
   });
@@ -189,7 +190,7 @@ describe("Retrieval Strategies Integration Tests", () => {
           limit: 5,
         });
 
-        expect(Array.isArray(results)).toBe(true);
+        assert.strictEqual(Array.isArray(results), true);
       });
     });
   });
@@ -212,8 +213,8 @@ describe("Retrieval Strategies Integration Tests", () => {
           limit: 10,
         });
 
-        expect(Array.isArray(results)).toBe(true);
-        expect(results.length).toBeGreaterThanOrEqual(0);
+        assert.strictEqual(Array.isArray(results), true);
+        assert(results.length >= 0);
       });
     });
 
@@ -233,7 +234,7 @@ describe("Retrieval Strategies Integration Tests", () => {
         // Check for duplicate node IDs
         const nodeIds = results.map((r) => r.node.id);
         const uniqueIds = new Set(nodeIds);
-        expect(uniqueIds.size).toBe(nodeIds.length);
+        assert.strictEqual(uniqueIds.size, nodeIds.length);
       });
     });
   });
@@ -259,7 +260,7 @@ describe("Retrieval Strategies Integration Tests", () => {
             limit: 5,
           });
 
-          expect(Array.isArray(results)).toBe(true);
+          assert.strictEqual(Array.isArray(results), true);
         }
       });
     });
@@ -272,7 +273,7 @@ describe("Retrieval Strategies Integration Tests", () => {
         // Search without specifying strategy
         const results = await souvenir.search("test");
 
-        expect(Array.isArray(results)).toBe(true);
+        assert.strictEqual(Array.isArray(results), true);
       });
     });
   });
@@ -296,8 +297,8 @@ describe("Retrieval Strategies Integration Tests", () => {
           strategy: "vector",
         });
 
-        expect(results3.length).toBeLessThanOrEqual(3);
-        expect(results5.length).toBeLessThanOrEqual(5);
+        assert(results3.length <= 3);
+        assert(results5.length <= 5);
       });
     });
 
@@ -314,7 +315,7 @@ describe("Retrieval Strategies Integration Tests", () => {
           limit: 10,
         });
 
-        expect(Array.isArray(results)).toBe(true);
+        assert.strictEqual(Array.isArray(results), true);
       });
     });
   });
@@ -327,8 +328,8 @@ describe("Retrieval Strategies Integration Tests", () => {
           limit: 5,
         });
 
-        expect(Array.isArray(results)).toBe(true);
-        expect(results.length).toBe(0);
+        assert.strictEqual(Array.isArray(results), true);
+        assert.strictEqual(results.length, 0);
       });
     });
 
@@ -342,7 +343,7 @@ describe("Retrieval Strategies Integration Tests", () => {
           limit: 5,
         });
 
-        expect(Array.isArray(results)).toBe(true);
+        assert.strictEqual(Array.isArray(results), true);
       });
     });
 
@@ -357,7 +358,7 @@ describe("Retrieval Strategies Integration Tests", () => {
           limit: 5,
         });
 
-        expect(Array.isArray(results)).toBe(true);
+        assert.strictEqual(Array.isArray(results), true);
       });
     });
   });

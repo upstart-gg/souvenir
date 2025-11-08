@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it } from "bun:test";
-import { Souvenir } from "../core/souvenir.js";
-import type { EmbeddingProvider } from "../types.js";
-import { withTestDatabase } from "./setup.js";
+import assert from "node:assert/strict";
+import { afterEach, beforeEach, describe, it } from "node:test";
+import { Souvenir } from "../core/souvenir.ts";
+import type { EmbeddingProvider } from "../types.ts";
+import { withTestDatabase } from "./setup.ts";
 
 /**
  * Mock embedding provider for testing
@@ -91,10 +92,10 @@ describe("Souvenir Integration Tests", () => {
           metadata: { type: "test" },
         });
 
-        expect(chunkIds).toBeDefined();
-        expect(Array.isArray(chunkIds)).toBe(true);
-        expect(chunkIds.length).toBeGreaterThan(0);
-        expect(chunkIds[0]).toMatch(/^[a-f0-9-]+$/);
+        assert(chunkIds !== undefined);
+        assert.strictEqual(Array.isArray(chunkIds), true);
+        assert(chunkIds.length > 0);
+        assert(/^[a-f0-9-]+$/.test(chunkIds[0] as string));
       });
     });
 
@@ -106,10 +107,10 @@ describe("Souvenir Integration Tests", () => {
         const ids1 = await souvenir.add(text1);
         const ids2 = await souvenir.add(text2);
 
-        expect(ids1.length).toBeGreaterThan(0);
-        expect(ids2.length).toBeGreaterThan(0);
+        assert(ids1.length > 0);
+        assert(ids2.length > 0);
         // IDs should be unique
-        expect(ids1[0]).not.toBe(ids2[0]);
+        assert.notStrictEqual(ids1[0], ids2[0]);
       });
     });
 
@@ -121,7 +122,7 @@ describe("Souvenir Integration Tests", () => {
           sourceIdentifier: "test-source",
         });
 
-        expect(chunkIds.length).toBeGreaterThan(0);
+        assert(chunkIds.length > 0);
         // Verify metadata is stored (would be checked in repository layer)
       });
     });
@@ -141,7 +142,7 @@ describe("Souvenir Integration Tests", () => {
         });
 
         // Verify processing completes without error
-        expect(true).toBe(true);
+        assert.strictEqual(true, true);
       });
     });
 
@@ -152,7 +153,7 @@ describe("Souvenir Integration Tests", () => {
           generateEmbeddings: true,
         });
 
-        expect(true).toBe(true);
+        assert.strictEqual(true, true);
       });
     });
 
@@ -161,14 +162,14 @@ describe("Souvenir Integration Tests", () => {
         const text = "Test document for embedding generation.";
         const chunkIds = await souvenir.add(text);
 
-        expect(chunkIds.length).toBeGreaterThan(0);
+        assert(chunkIds.length > 0);
 
         await souvenir.processAll({
           generateEmbeddings: true,
         });
 
         // Embeddings should be generated
-        expect(true).toBe(true);
+        assert.strictEqual(true, true);
       });
     });
   });
@@ -177,8 +178,8 @@ describe("Souvenir Integration Tests", () => {
     it("should return empty results for empty memory", async () => {
       await withTestDatabase(async () => {
         const results = await souvenir.search("test query");
-        expect(Array.isArray(results)).toBe(true);
-        expect(results.length).toBe(0);
+        assert.strictEqual(Array.isArray(results), true);
+        assert.strictEqual(results.length, 0);
       });
     });
 
@@ -196,12 +197,12 @@ describe("Souvenir Integration Tests", () => {
           strategy: "vector",
         });
 
-        expect(Array.isArray(results)).toBe(true);
+        assert.strictEqual(Array.isArray(results), true);
         if (results.length > 0 && results[0]) {
-          expect(results[0].node).toBeDefined();
-          expect(results[0].node.content).toBeDefined();
-          expect(results[0].score).toBeDefined();
-          expect(typeof results[0].score).toBe("number");
+          assert(results[0].node !== undefined);
+          assert(results[0].node.content !== undefined);
+          assert(results[0].score !== undefined);
+          assert.strictEqual(typeof results[0].score, "number");
         }
       });
     });
@@ -217,14 +218,14 @@ describe("Souvenir Integration Tests", () => {
           strategy: "vector",
           limit: 5,
         });
-        expect(Array.isArray(vectorResults)).toBe(true);
+        assert.strictEqual(Array.isArray(vectorResults), true);
 
         // Test hybrid strategy
         const hybridResults = await souvenir.search("test", {
           strategy: "hybrid",
           limit: 5,
         });
-        expect(Array.isArray(hybridResults)).toBe(true);
+        assert.strictEqual(Array.isArray(hybridResults), true);
       });
     });
 
@@ -242,7 +243,7 @@ describe("Souvenir Integration Tests", () => {
           strategy: "vector",
         });
 
-        expect(results.length).toBeLessThanOrEqual(2);
+        assert(results.length <= 2);
       });
     });
   });
@@ -251,7 +252,7 @@ describe("Souvenir Integration Tests", () => {
     it("should return true for healthy database", async () => {
       await withTestDatabase(async () => {
         const healthy = await souvenir.healthCheck();
-        expect(healthy).toBe(true);
+        assert.strictEqual(healthy, true);
       });
     });
   });
@@ -268,10 +269,10 @@ describe("Souvenir Integration Tests", () => {
           const chunkId = chunkIds[0];
           if (chunkId) {
             const node = await souvenir.getNode(chunkId);
-            expect(node).toBeDefined();
+            assert(node !== undefined);
             if (node) {
-              expect(node.id).toBe(chunkId);
-              expect(node.content).toBeDefined();
+              assert.strictEqual(node.id, chunkId);
+              assert(node.content !== undefined);
             }
           }
         }
@@ -284,7 +285,7 @@ describe("Souvenir Integration Tests", () => {
         const node = await souvenir.getNode(
           "00000000-0000-0000-0000-000000000000",
         );
-        expect(node).toBeNull();
+        assert(node === null);
       });
     });
   });
@@ -304,7 +305,7 @@ describe("Souvenir Integration Tests", () => {
           metadata: { topic: "AI" },
         });
 
-        expect(chunkIds.length).toBeGreaterThan(0);
+        assert(chunkIds.length > 0);
 
         // Transform: Process content
         await souvenir.processAll({
@@ -318,13 +319,13 @@ describe("Souvenir Integration Tests", () => {
           strategy: "vector",
         });
 
-        expect(Array.isArray(results)).toBe(true);
+        assert.strictEqual(Array.isArray(results), true);
 
         // Verify we can access nodes
         if (results.length > 0 && results[0]) {
           const node = await souvenir.getNode(results[0].node.id);
-          expect(node).toBeDefined();
-          expect(node?.content).toBeDefined();
+          assert(node !== undefined);
+          assert(node?.content !== undefined);
         }
       });
     });

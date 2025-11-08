@@ -9,7 +9,7 @@ import type {
   MemoryNode,
   MemoryRelationship,
   SearchResult,
-} from "../types.js";
+} from "../types.ts";
 
 /**
  * Format search results as text context for LLM

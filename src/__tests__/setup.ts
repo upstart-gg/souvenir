@@ -7,7 +7,7 @@
 import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import postgres from "postgres";
-import { DatabaseClient } from "../db/client.js";
+import { DatabaseClient } from "../db/client.ts";
 
 const execAsync = promisify(exec);
 
@@ -100,8 +100,13 @@ export async function initializeTestDatabase(): Promise<void> {
   try {
     const databaseUrl = getTestDatabaseUrl();
 
+    // Ensure sslmode is set in the database URL for dbmate
+    const dbUrlWithSSL = databaseUrl.includes("sslmode")
+      ? databaseUrl
+      : `${databaseUrl}${databaseUrl.includes("?") ? "&" : "?"}sslmode=disable`;
+
     // Set DATABASE_URL for dbmate command
-    const env = { ...process.env, DATABASE_URL: databaseUrl };
+    const env = { ...process.env, DATABASE_URL: dbUrlWithSSL };
 
     // Run dbmate up to apply all migrations
     console.log("Initializing test database with dbmate migrations...");
@@ -140,7 +145,12 @@ export async function resetTestDatabase(): Promise<void> {
   try {
     const databaseUrl = getTestDatabaseUrl();
 
-    const env = { ...process.env, DATABASE_URL: databaseUrl };
+    // Ensure sslmode is set in the database URL for dbmate
+    const dbUrlWithSSL = databaseUrl.includes("sslmode")
+      ? databaseUrl
+      : `${databaseUrl}${databaseUrl.includes("?") ? "&" : "?"}sslmode=disable`;
+
+    const env = { ...process.env, DATABASE_URL: dbUrlWithSSL };
 
     console.log("Resetting test database...");
 
@@ -195,7 +205,12 @@ export async function cleanupTestDatabase(): Promise<void> {
   try {
     const databaseUrl = getTestDatabaseUrl();
 
-    const env = { ...process.env, DATABASE_URL: databaseUrl };
+    // Ensure sslmode is set in the database URL for dbmate
+    const dbUrlWithSSL = databaseUrl.includes("sslmode")
+      ? databaseUrl
+      : `${databaseUrl}${databaseUrl.includes("?") ? "&" : "?"}sslmode=disable`;
+
+    const env = { ...process.env, DATABASE_URL: dbUrlWithSSL };
 
     console.log("Cleaning up test database...");
     await execAsync("dbmate down", {
@@ -280,46 +295,69 @@ export async function withIsolatedDatabase<T>(
   return withTestDatabase(testFn);
 }
 
-// Bun test setup: Initialize database once before all tests
-try {
-  console.log("\n📦 Test database setup starting...\n");
+// node:test setup: Initialize database once before all tests
+let isInitialized = false;
+let setupPromise: Promise<void> | null = null;
 
-  // Check if we're using local docker setup
-  const databaseUrl = getTestDatabaseUrl();
-  const isLocalDocker = databaseUrl.includes("localhost:54322");
-
-  if (isLocalDocker) {
-    console.log(`Using local docker PostgreSQL at: ${databaseUrl}`);
-    console.log("Make sure to run: bun run docker:up\n");
+async function ensureSetup(): Promise<void> {
+  if (isInitialized) {
+    return;
   }
 
-  // Wait for database availability (critical for CI)
-  await waitForDatabase();
+  if (setupPromise) {
+    return setupPromise;
+  }
 
-  // Initialize database schema via dbmate
-  await initializeTestDatabase();
+  setupPromise = (async () => {
+    console.log("\n📦 Test database setup starting...\n");
 
-  console.log("\n✓ Test database setup completed\n");
+    // Check if we're using local docker setup
+    const databaseUrl = getTestDatabaseUrl();
+    const isLocalDocker = databaseUrl.includes("localhost:54322");
 
-  // Register cleanup hook
-  process.on("exit", async () => {
-    console.log("\n🧹 Test database cleanup starting...\n");
-    try {
-      await closeTestDatabase();
-      await cleanupTestDatabase();
-      console.log("\n✓ Test database cleanup completed\n");
-    } catch (error) {
-      console.error("\n✗ Test database cleanup failed:", error);
+    if (isLocalDocker) {
+      console.log(`Using local docker PostgreSQL at: ${databaseUrl}`);
+      console.log("Make sure to run: pnpm docker:up\n");
     }
-  });
-} catch (error) {
-  console.error("\n✗ Test database setup failed:", error);
-  console.error(
-    "\nTroubleshooting:\n" +
-      "1. Ensure PostgreSQL is running: bun run docker:up\n" +
-      "2. Check PostgreSQL logs: docker-compose logs postgres\n" +
-      "3. Verify dbmate is installed: which dbmate or brew install dbmate\n" +
-      "4. Check database migrations exist in db/migrations/\n",
-  );
-  process.exit(1);
+
+    // Wait for database availability (critical for CI)
+    await waitForDatabase();
+
+    // Initialize database schema via dbmate
+    await initializeTestDatabase();
+    isInitialized = true;
+
+    console.log("\n✓ Test database setup completed\n");
+
+    // Register cleanup hook for node:test (only once)
+    process.on("exit", async () => {
+      console.log("\n🧹 Test database cleanup starting...\n");
+      try {
+        await closeTestDatabase();
+        if (isInitialized) {
+          await cleanupTestDatabase();
+        }
+        console.log("\n✓ Test database cleanup completed\n");
+      } catch (error) {
+        console.error("\n✗ Test database cleanup failed:", error);
+      }
+    });
+  })();
+
+  try {
+    await setupPromise;
+  } catch (error) {
+    console.error("\n✗ Test database setup failed:", error);
+    console.error(
+      "\nTroubleshooting:\n" +
+        "1. Ensure PostgreSQL is running: pnpm docker:up\n" +
+        "2. Check PostgreSQL logs: docker-compose logs postgres\n" +
+        "3. Verify dbmate is installed: which dbmate or brew install dbmate\n" +
+        "4. Check database migrations exist in db/migrations/\n",
+    );
+    process.exit(1);
+  }
 }
+
+// Run setup immediately when this module is imported
+await ensureSetup();

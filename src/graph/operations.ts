@@ -1,10 +1,10 @@
-import type { MemoryRepository } from "../db/repository.js";
+import type { MemoryRepository } from "../db/repository.ts";
 import type {
   GraphPath,
   MemoryNode,
   MemoryRelationship,
   TraversalOptions,
-} from "../types.js";
+} from "../types.ts";
 
 /**
  * Graph operations for knowledge graph traversal

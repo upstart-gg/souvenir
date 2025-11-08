@@ -3,9 +3,10 @@
  * Tests findPaths, getNeighborhood, and findClusters
  */
 
-import { describe, expect, it } from "bun:test";
-import { Souvenir } from "../core/souvenir.js";
-import { withTestDatabase } from "./setup.js";
+import assert from "node:assert/strict";
+import { describe, it } from "node:test";
+import { Souvenir } from "../core/souvenir.ts";
+import { withTestDatabase } from "./setup.ts";
 
 // Mock embedding provider for deterministic testing
 class TestEmbeddingProvider {
@@ -134,8 +135,8 @@ describe("Souvenir Graph Operations Integration Tests", () => {
           const paths = await souvenir.findPaths(nodeAId, nodeCId);
 
           // Should find at least some information
-          expect(paths).toBeDefined();
-          expect(Array.isArray(paths)).toBe(true);
+          assert(paths !== undefined);
+          assert.strictEqual(Array.isArray(paths), true);
         } finally {
           await cleanup();
         }
@@ -153,9 +154,9 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
           const paths = await souvenir.findPaths(fakeId1, fakeId2);
 
-          expect(paths).toBeDefined();
-          expect(Array.isArray(paths)).toBe(true);
-          expect(paths.length).toBe(0);
+          assert(paths !== undefined);
+          assert.strictEqual(Array.isArray(paths), true);
+          assert.strictEqual(paths.length, 0);
         } finally {
           await cleanup();
         }
@@ -203,8 +204,8 @@ describe("Souvenir Graph Operations Integration Tests", () => {
             maxDepth: 10,
           });
 
-          expect(pathsShallow).toBeDefined();
-          expect(pathsDeep).toBeDefined();
+          assert(pathsShallow !== undefined);
+          assert(pathsDeep !== undefined);
         } finally {
           await cleanup();
         }
@@ -250,9 +251,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
               const current = paths[i];
               const next = paths[i + 1];
               if (current && next) {
-                expect(current.totalWeight).toBeGreaterThanOrEqual(
-                  next.totalWeight,
-                );
+                assert(current.totalWeight >= next.totalWeight);
               }
             }
           }
@@ -288,11 +287,11 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
           const neighborhood = await souvenir.getNeighborhood(nodeId);
 
-          expect(neighborhood).toBeDefined();
-          expect(neighborhood.nodes).toBeDefined();
-          expect(Array.isArray(neighborhood.nodes)).toBe(true);
-          expect(neighborhood.relationships).toBeDefined();
-          expect(Array.isArray(neighborhood.relationships)).toBe(true);
+          assert(neighborhood !== undefined);
+          assert(neighborhood.nodes !== undefined);
+          assert.strictEqual(Array.isArray(neighborhood.nodes), true);
+          assert(neighborhood.relationships !== undefined);
+          assert.strictEqual(Array.isArray(neighborhood.relationships), true);
         } finally {
           await cleanup();
         }
@@ -328,7 +327,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
           const hasOriginalNode = neighborhood.nodes.some(
             (n) => n.id === nodeId,
           );
-          expect(hasOriginalNode).toBe(true);
+          assert.strictEqual(hasOriginalNode, true);
         } finally {
           await cleanup();
         }
@@ -368,9 +367,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
           });
 
           // Deeper search should return same or more nodes
-          expect(neighborhood1.nodes.length).toBeLessThanOrEqual(
-            neighborhood3.nodes.length,
-          );
+          assert(neighborhood1.nodes.length <= neighborhood3.nodes.length);
         } finally {
           await cleanup();
         }
@@ -404,9 +401,9 @@ describe("Souvenir Graph Operations Integration Tests", () => {
             nodeTypes: ["document", "entity"],
           });
 
-          expect(neighborhood).toBeDefined();
-          expect(Array.isArray(neighborhood.nodes)).toBe(true);
-          expect(Array.isArray(neighborhood.relationships)).toBe(true);
+          assert(neighborhood !== undefined);
+          assert.strictEqual(Array.isArray(neighborhood.nodes), true);
+          assert.strictEqual(Array.isArray(neighborhood.relationships), true);
         } finally {
           await cleanup();
         }
@@ -423,10 +420,10 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
           const neighborhood = await souvenir.getNeighborhood(fakeId);
 
-          expect(neighborhood.nodes).toBeDefined();
-          expect(neighborhood.nodes.length).toBe(0);
-          expect(neighborhood.relationships).toBeDefined();
-          expect(neighborhood.relationships.length).toBe(0);
+          assert(neighborhood.nodes !== undefined);
+          assert.strictEqual(neighborhood.nodes.length, 0);
+          assert(neighborhood.relationships !== undefined);
+          assert.strictEqual(neighborhood.relationships.length, 0);
         } finally {
           await cleanup();
         }
@@ -461,8 +458,8 @@ describe("Souvenir Graph Operations Integration Tests", () => {
             3, // minClusterSize
           );
 
-          expect(clusters).toBeDefined();
-          expect(Array.isArray(clusters)).toBe(true);
+          assert(clusters !== undefined);
+          assert.strictEqual(Array.isArray(clusters), true);
         } finally {
           await cleanup();
         }
@@ -489,9 +486,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
           // Find with minClusterSize 1 (should include all)
           const clustersPermissive = await souvenir.findClusters(sessionId, 1);
 
-          expect(clustersStrict.length).toBeLessThanOrEqual(
-            clustersPermissive.length,
-          );
+          assert(clustersStrict.length <= clustersPermissive.length);
         } finally {
           await cleanup();
         }
@@ -508,9 +503,9 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
           const clusters = await souvenir.findClusters(emptySessionId);
 
-          expect(clusters).toBeDefined();
-          expect(Array.isArray(clusters)).toBe(true);
-          expect(clusters.length).toBe(0);
+          assert(clusters !== undefined);
+          assert.strictEqual(Array.isArray(clusters), true);
+          assert.strictEqual(clusters.length, 0);
         } finally {
           await cleanup();
         }
@@ -538,8 +533,8 @@ describe("Souvenir Graph Operations Integration Tests", () => {
           const sessionId = crypto.randomUUID();
           const clusters = await souvenir.findClusters(sessionId, 1);
 
-          expect(clusters).toBeDefined();
-          expect(Array.isArray(clusters)).toBe(true);
+          assert(clusters !== undefined);
+          assert.strictEqual(Array.isArray(clusters), true);
         } finally {
           await cleanup();
         }
@@ -576,10 +571,10 @@ describe("Souvenir Graph Operations Integration Tests", () => {
           const sessionId = souvenir.getSessionId();
           const clusters = await souvenir.findClusters(sessionId, 2);
 
-          expect(clusters).toBeDefined();
-          expect(Array.isArray(clusters)).toBe(true);
+          assert(clusters !== undefined);
+          assert.strictEqual(Array.isArray(clusters), true);
           // Should find multiple clusters
-          expect(clusters.length).toBeGreaterThanOrEqual(1);
+          assert(clusters.length >= 1);
         } finally {
           await cleanup();
         }
@@ -622,7 +617,7 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
           // Step 1: Get neighborhood of A
           const neighborhoodA = await souvenir.getNeighborhood(nodeA);
-          expect(neighborhoodA.nodes.length).toBeGreaterThan(0);
+          assert(neighborhoodA.nodes.length > 0);
 
           // Step 2: If B is a neighbor, find paths to C
           const nodeB = nodes[1]?.id;
@@ -631,13 +626,13 @@ describe("Souvenir Graph Operations Integration Tests", () => {
             const hasB = neighborhoodA.nodes.some((n) => n.id === nodeB);
             if (hasB) {
               const pathsBC = await souvenir.findPaths(nodeB, nodeC);
-              expect(pathsBC).toBeDefined();
+              assert(pathsBC !== undefined);
             }
           }
 
           // Step 3: Find clusters
           const clusters = await souvenir.findClusters(sessionId);
-          expect(clusters).toBeDefined();
+          assert(clusters !== undefined);
         } finally {
           await cleanup();
         }
@@ -696,14 +691,14 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
           if (nodeA1 && nodeX2) {
             const paths = await souvenir.findPaths(nodeA1, nodeX2);
-            expect(paths).toBeDefined();
-            expect(Array.isArray(paths)).toBe(true);
+            assert(paths !== undefined);
+            assert.strictEqual(Array.isArray(paths), true);
           }
 
           // Find clusters
           const sessionId = crypto.randomUUID();
           const clusters = await souvenir.findClusters(sessionId);
-          expect(clusters).toBeDefined();
+          assert(clusters !== undefined);
         } finally {
           await cleanup();
         }
@@ -741,18 +736,18 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
           // Pipeline: Analyze node
           const neighborhood = await souvenir.getNeighborhood(nodeId);
-          expect(neighborhood.nodes).toBeDefined();
+          assert(neighborhood.nodes !== undefined);
 
           // Find clusters for structural analysis
           const sessionId = crypto.randomUUID();
           const clusters = await souvenir.findClusters(sessionId);
-          expect(clusters).toBeDefined();
+          assert(clusters !== undefined);
 
           // Search for related content
           const searchResults = await souvenir.search(
             "pipeline analysis structure",
           );
-          expect(searchResults).toBeDefined();
+          assert(searchResults !== undefined);
         } finally {
           await cleanup();
         }
@@ -785,8 +780,8 @@ describe("Souvenir Graph Operations Integration Tests", () => {
 
           // Try to find paths from node to itself
           const paths = await souvenir.findPaths(nodeId, nodeId);
-          expect(paths).toBeDefined();
-          expect(Array.isArray(paths)).toBe(true);
+          assert(paths !== undefined);
+          assert.strictEqual(Array.isArray(paths), true);
         } finally {
           await cleanup();
         }
@@ -829,8 +824,8 @@ describe("Souvenir Graph Operations Integration Tests", () => {
             maxDepth: 1000,
           });
 
-          expect(paths).toBeDefined();
-          expect(Array.isArray(paths)).toBe(true);
+          assert(paths !== undefined);
+          assert.strictEqual(Array.isArray(paths), true);
         } finally {
           await cleanup();
         }
@@ -864,8 +859,8 @@ describe("Souvenir Graph Operations Integration Tests", () => {
             relationshipTypes: ["mentions", "references", "related_to"],
           });
 
-          expect(neighborhood).toBeDefined();
-          expect(Array.isArray(neighborhood.nodes)).toBe(true);
+          assert(neighborhood !== undefined);
+          assert.strictEqual(Array.isArray(neighborhood.nodes), true);
         } finally {
           await cleanup();
         }
