@@ -87,8 +87,6 @@ bun run lint:fix
 
 - Write tests for new features
 - Ensure all tests pass before submitting PR
-- Aim for >90% code coverage
-- Run tests with coverage: `bun test:coverage`
 
 ## Pull Request Process
 
