@@ -15,63 +15,17 @@ When you add content to memory, Souvenir automatically breaks it into smaller pi
 
 Souvenir supports two chunking strategies, each optimized for different content types.
 
-### Token Chunking (For Fixed-Size Requirements)
-
-**What it does**: Splits text into fixed-size chunks with configurable overlap.
-
-**Best for**:
-- ✅ When you have strict token limits to respect
-- ✅ Highly predictable chunk sizes required
-- ✅ Maximum processing speed is critical
-- ✅ Very uniform, short-form content only
-
-**Configuration**:
-```typescript
-const souvenir = new Souvenir({
-  databaseUrl: process.env.DATABASE_URL!,
-  chunkingMode: 'token',
-  chunkSize: 1000,       // Tokens per chunk
-  chunkOverlap: 200,     // Overlap between chunks
-  chunkingTokenizer: 'character', // Optional: 'Xenova/gpt2' for better accuracy
-});
-```
-
-**How it works**:
-```typescript
-// Input
-"I'm Alice. I work at Acme Corp as a software engineer. I love hiking on weekends."
-
-// With chunkSize=30, chunkOverlap=10
-// Chunk 1: "I'm Alice. I work at Acme Co"
-// Chunk 2: "Acme Corp as a software engin"
-// Chunk 3: "engineer. I love hiking on we"
-// Chunk 4: "on weekends."
-```
-
-**Pros**:
-- ⚡ Fast and simple
-- 📏 Predictable chunk sizes (respects token limits)
-- 🔄 Overlap preserves context at boundaries
-
-**Cons**:
-- ✂️ May split sentences and thoughts awkwardly
-- 📝 Ignores document structure
-- 🎯 Less semantic coherence
-- ❌ Can break context mid-sentence
-
----
-
 ### Recursive Chunking (Default - Recommended for Agents)
 
 **What it does**: Intelligently splits text following natural structure (paragraphs → sentences → words → characters).
 
 **Best for**:
-- ✅ **Agent memory** - handles both short facts and longer context
-- ✅ Conversational memory with complete thoughts
-- ✅ Documentation and articles
-- ✅ Code snippets and analysis
-- ✅ Research papers and emails
-- ✅ Mixed content types (what agents typically save)
+- **Agent memory** - handles both short facts and longer context
+- Conversational memory with complete thoughts
+- Documentation and articles
+- Code snippets and analysis
+- Research papers and emails
+- Mixed content types (what agents typically save)
 
 **Configuration**:
 ```typescript
@@ -126,6 +80,52 @@ const chunks = await chunkText(documentation, {
 - 📐 Variable chunk sizes (less predictable)
 - 🐢 Slightly slower (~5ms vs ~1ms per 1000 chars)
 - 🤔 More configuration options (though defaults work well)
+
+---
+
+### Token Chunking (For Fixed-Size Requirements)
+
+**What it does**: Splits text into fixed-size chunks with configurable overlap.
+
+**Best for**:
+- When you have strict token limits to respect
+- Highly predictable chunk sizes required
+- Maximum processing speed is critical
+- Very uniform, short-form content only
+
+**Configuration**:
+```typescript
+const souvenir = new Souvenir({
+  databaseUrl: process.env.DATABASE_URL!,
+  chunkingMode: 'token',
+  chunkSize: 1000,       // Tokens per chunk
+  chunkOverlap: 200,     // Overlap between chunks
+  chunkingTokenizer: 'character', // Optional: 'Xenova/gpt2' for better accuracy
+});
+```
+
+**How it works**:
+```typescript
+// Input
+"I'm Alice. I work at Acme Corp as a software engineer. I love hiking on weekends."
+
+// With chunkSize=30, chunkOverlap=10
+// Chunk 1: "I'm Alice. I work at Acme Co"
+// Chunk 2: "Acme Corp as a software engin"
+// Chunk 3: "engineer. I love hiking on we"
+// Chunk 4: "on weekends."
+```
+
+**Pros**:
+- ⚡ Fast and simple
+- 📏 Predictable chunk sizes (respects token limits)
+- 🔄 Overlap preserves context at boundaries
+
+**Cons**:
+- ✂️ May split sentences and thoughts awkwardly
+- 📝 Ignores document structure
+- 🎯 Less semantic coherence
+- ❌ Can break context mid-sentence
 
 ---
 
@@ -247,20 +247,6 @@ Chunk 2: "Tower is located in Paris, France."
 - **Small (50-100)**: Storage-efficient, minimal context preservation
 - **Medium (200)**: ✅ Balanced (recommended default)
 - **Large (400-500)**: Maximum context, higher storage cost
-
----
-
-## Performance Considerations
-
-### Token Mode
-- ⚡ **Speed**: Fast (~1ms per 1000 chars)
-- 💾 **Storage**: More chunks with overlap
-- 🎯 **Retrieval**: Fast but less semantic
-
-### Recursive Mode
-- 🐢 **Speed**: Slower (~5ms per 1000 chars)
-- 💾 **Storage**: Fewer, larger chunks
-- 🎯 **Retrieval**: Better semantic boundaries
 
 ---
 

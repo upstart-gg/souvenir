@@ -73,6 +73,8 @@ bun run docs:build
 bun run docs:preview
 ```
 
+Note: don't use emojis in documentation.
+
 ## Architecture
 
 ### ETL Pipeline Design
