@@ -1,5 +1,11 @@
 # @upstart.gg/souvenir
 
+## 0.0.2
+
+### Patch Changes
+
+- [#6](https://github.com/upstart-gg/souvenir/pull/6) [`9fbd48c`](https://github.com/upstart-gg/souvenir/commit/9fbd48cf5ebf236a08f8f033fb03f120a9983a7a) Thanks [@mattallty](https://github.com/mattallty)! - test release 2
+
 ## 0.0.1
 
 ### Patch Changes
