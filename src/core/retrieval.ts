@@ -47,19 +47,19 @@ export class RetrievalStrategies {
       sessionId,
       includeRelationships = false,
       relationshipTypes,
-      metadataTags,
+      category,
     } = options;
 
     // Generate query embedding
     const queryEmbedding = await this.embedding.embed(query);
 
-    // Search by vector with metadata tags
+    // Search by vector with category filter
     let results = await this.repository.searchByVector(
       queryEmbedding,
       limit * 2,
       minScore,
       nodeTypes,
-      metadataTags,
+      category,
     );
 
     // Filter by session if provided

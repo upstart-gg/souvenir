@@ -19,7 +19,9 @@ export function createSouvenirTools(souvenir: Souvenir): {
     metadata: z
       .record(z.string(), z.unknown())
       .optional()
-      .describe("Optional metadata about this memory"),
+      .describe(
+        "Optional metadata about this memory. Use 'category' field to enable filtering (e.g., {category: 'preference'})",
+      ),
     processImmediately: z
       .boolean()
       .optional()
@@ -36,11 +38,11 @@ export function createSouvenirTools(souvenir: Souvenir): {
       .describe(
         "Whether to explore related memories in the knowledge graph (default: true)",
       ),
-    metadataTags: z
-      .record(z.string(), z.unknown())
+    category: z
+      .string()
       .optional()
       .describe(
-        "Filter results by metadata tags (e.g., {category: 'preference', priority: 'high'})",
+        "Filter results by memory category (e.g., 'preference', 'configuration', 'task')",
       ),
   });
 
@@ -93,7 +95,7 @@ export function createSouvenirTools(souvenir: Souvenir): {
       "Search long-term memory for relevant information. Automatically explores the knowledge graph to find related memories and returns context formatted for LLM consumption. Always scoped to current session.",
     inputSchema: searchMemorySchema,
     execute: async (params: z.infer<typeof searchMemorySchema>) => {
-      const { query, explore = true, metadataTags } = params;
+      const { query, explore = true, category } = params;
 
       // Get vector search results (always scoped to current session)
       let vectorResults = await souvenir.search(query, {
@@ -101,7 +103,7 @@ export function createSouvenirTools(souvenir: Souvenir): {
         limit: 5,
         strategy: "vector",
         includeRelationships: explore,
-        metadataTags,
+        category,
       });
 
       // Adaptive fallback: if no results at configured threshold, retry with minScore=0
@@ -112,7 +114,7 @@ export function createSouvenirTools(souvenir: Souvenir): {
           strategy: "vector",
           includeRelationships: explore,
           minScore: 0, // widest possible recall
-          metadataTags,
+          category,
         });
         if (broadened.length > 0) {
           vectorResults = broadened;
@@ -132,13 +134,11 @@ export function createSouvenirTools(souvenir: Souvenir): {
               return queryTokens.some((t) => contentLower.includes(t));
             });
 
-            // Apply metadata tag filtering if provided
-            if (metadataTags && Object.keys(metadataTags).length > 0) {
-              keywordMatches = keywordMatches.filter((n) => {
-                return Object.entries(metadataTags).every(
-                  ([key, value]) => n.metadata[key] === value,
-                );
-              });
+            // Apply category filtering if provided
+            if (category) {
+              keywordMatches = keywordMatches.filter(
+                (n) => n.metadata.category === category,
+              );
             }
 
             if (keywordMatches.length > 0) {
@@ -190,7 +190,7 @@ export function createSouvenirTools(souvenir: Souvenir): {
           limit: 5,
           strategy: "hybrid",
           includeRelationships: true,
-          metadataTags,
+          category,
         });
 
         // If hybrid yielded nothing but vector did, fall back to vector results while preserving metadata formatting

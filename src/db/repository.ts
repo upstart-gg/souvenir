@@ -106,7 +106,7 @@ export class MemoryRepository {
     limit: number = 10,
     minScore: number = 0.7,
     nodeTypes?: string[],
-    metadataTags?: Record<string, unknown>,
+    category?: string,
   ): Promise<SearchResult[]> {
     const embeddingArray = `[${embedding.join(",")}]`;
 
@@ -125,10 +125,10 @@ export class MemoryRepository {
       queryStr += `\n        AND node_type IN (${types})`;
     }
 
-    // Add metadata tags filter using JSONB containment
-    if (metadataTags && Object.keys(metadataTags).length > 0) {
-      const metadataJson = JSON.stringify(metadataTags).replace(/'/g, "''");
-      queryStr += `\n        AND metadata @> '${metadataJson}'::jsonb`;
+    // Add category filter using JSONB string extraction
+    if (category) {
+      const escapedCategory = category.replace(/'/g, "''");
+      queryStr += `\n        AND metadata->>'category' = '${escapedCategory}'`;
     }
 
     queryStr += `\n      ORDER BY embedding <=> '${embeddingArray}'::vector`;

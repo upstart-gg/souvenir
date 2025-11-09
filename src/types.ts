@@ -111,7 +111,7 @@ export interface SearchOptions {
   strategy?: RetrievalStrategy;
   topK?: number; // Explicit top-k parameter (per paper)
   formatForLLM?: boolean; // Format output for LLM consumption
-  metadataTags?: Record<string, unknown>; // Filter by metadata key-value pairs
+  category?: string; // Filter by memory category
 }
 
 /**
