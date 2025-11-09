@@ -47,28 +47,26 @@ export class RetrievalStrategies {
       sessionId,
       includeRelationships = false,
       relationshipTypes,
+      metadataTags,
     } = options;
 
     // Generate query embedding
     const queryEmbedding = await this.embedding.embed(query);
 
-    // Search by vector
+    // Search by vector with metadata tags
     let results = await this.repository.searchByVector(
       queryEmbedding,
       limit * 2,
       minScore,
       nodeTypes,
+      metadataTags,
     );
-
-    // Debug logging removed
 
     // Filter by session if provided
     if (sessionId) {
       const sessionNodes = await this.repository.getNodesInSession(sessionId);
       const sessionNodeIds = new Set(sessionNodes.map((n) => n.id));
-      // Debug logging removed
       results = results.filter((r) => sessionNodeIds.has(r.node.id));
-      // Debug logging removed
     }
 
     // Limit results
