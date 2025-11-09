@@ -106,33 +106,37 @@ export class MemoryRepository {
     limit: number = 10,
     minScore: number = 0.7,
     nodeTypes?: string[],
+    category?: string,
   ): Promise<SearchResult[]> {
     const embeddingArray = `[${embedding.join(",")}]`;
-    // Debug metrics removed
 
-    let rows: Record<string, unknown>[];
+    // Build base query
+    let queryStr = `
+      SELECT *,
+             1 - (embedding <=> '${embeddingArray}'::vector) as score
+      FROM memory_nodes
+      WHERE embedding IS NOT NULL
+        AND 1 - (embedding <=> '${embeddingArray}'::vector) >= ${minScore}
+    `;
+
+    // Add node type filter
     if (nodeTypes && nodeTypes.length > 0) {
-      rows = await this.db.query`
-        SELECT *,
-               1 - (embedding <=> ${embeddingArray}::vector) as score
-        FROM memory_nodes
-        WHERE embedding IS NOT NULL
-          AND node_type = ANY(${nodeTypes})
-          AND 1 - (embedding <=> ${embeddingArray}::vector) >= ${minScore}
-        ORDER BY embedding <=> ${embeddingArray}::vector
-        LIMIT ${limit}
-      `;
-    } else {
-      rows = await this.db.query`
-        SELECT *,
-               1 - (embedding <=> ${embeddingArray}::vector) as score
-        FROM memory_nodes
-        WHERE embedding IS NOT NULL
-          AND 1 - (embedding <=> ${embeddingArray}::vector) >= ${minScore}
-        ORDER BY embedding <=> ${embeddingArray}::vector
-        LIMIT ${limit}
-      `;
+      const types = nodeTypes
+        .map((t) => `'${t.replace(/'/g, "''")}'`)
+        .join(", ");
+      queryStr += `\n        AND node_type IN (${types})`;
     }
+
+    // Add category filter using JSONB string extraction
+    if (category) {
+      const escapedCategory = category.replace(/'/g, "''");
+      queryStr += `\n        AND metadata->>'category' = '${escapedCategory}'`;
+    }
+
+    queryStr += `\n      ORDER BY embedding <=> '${embeddingArray}'::vector`;
+    queryStr += `\n      LIMIT ${limit}`;
+
+    const rows = await this.db.query.unsafe(queryStr);
 
     return rows.map((row: Record<string, unknown>) => ({
       node: this.mapNode(row),

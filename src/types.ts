@@ -111,6 +111,7 @@ export interface SearchOptions {
   strategy?: RetrievalStrategy;
   topK?: number; // Explicit top-k parameter (per paper)
   formatForLLM?: boolean; // Format output for LLM consumption
+  category?: string; // Filter by memory category
 }
 
 /**
