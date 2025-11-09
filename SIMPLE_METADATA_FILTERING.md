@@ -30,7 +30,7 @@ async searchByVector(
 ```
 
 **How it works:**
-- Uses JSONB containment: `metadata @> '{"userId": "alice"}'::jsonb`
+- Uses JSONB containment: `metadata @> '{"category": "preference"}'::jsonb`
 - Efficiently leverages existing GIN index on `memory_nodes.metadata`
 - All tags are AND-combined (all must match)
 
@@ -60,7 +60,7 @@ let results = await this.repository.searchByVector(
      .record(z.string(), z.unknown())
      .optional()
      .describe(
-       "Filter results by metadata tags (e.g., {userId: 'alice', category: 'preference'})",
+       "Filter results by metadata tags (e.g., {category: 'preference', priority: 'high'})",
      )
    ```
 
@@ -78,26 +78,26 @@ let results = await this.repository.searchByVector(
 
 ## Usage Examples
 
-### Example 1: Multi-User System
+### Example 1: Category-Based Organization
 
 ```typescript
-// Store memories with user metadata
+// Store memories with categories
 await storeMemory({
-  content: "Alice prefers dark mode",
-  metadata: { userId: "alice", category: "preference" },
+  content: "User prefers dark mode in the application",
+  metadata: { category: "preference", scope: "ui" },
 });
 
 await storeMemory({
-  content: "Bob prefers light mode",
-  metadata: { userId: "bob", category: "preference" },
+  content: "Database connection string for staging environment",
+  metadata: { category: "configuration", scope: "database" },
 });
 
-// Search only Alice's preferences
+// Search only preferences
 await searchMemory({
-  query: "mode preference",
-  metadataTags: { userId: "alice" },
+  query: "user settings",
+  metadataTags: { category: "preference" },
 });
-// Returns: "Alice prefers dark mode" only
+// Returns: "User prefers dark mode..." only
 ```
 
 ### Example 2: Project-Scoped Memories
@@ -177,10 +177,10 @@ await searchMemory({
 // Returns: "Performance test..." only
 ```
 
-### Example 5: Category-Based Organization
+### Example 5: Priority-Based Filtering
 
 ```typescript
-// Store with categories
+// Store with priority levels
 await storeMemory({
   content: "Customer requested feature: dark mode toggle",
   metadata: { type: "feature-request", priority: "high" },
@@ -191,24 +191,24 @@ await storeMemory({
   metadata: { type: "bug-report", priority: "critical" },
 });
 
-// Search feature requests only
+// Search critical items only
 await searchMemory({
-  query: "customer",
-  metadataTags: { type: "feature-request" },
+  query: "issues",
+  metadataTags: { priority: "critical" },
 });
-// Returns: "Customer requested feature..." only
+// Returns: "Bug report..." only
 ```
 
 ## How Filtering Works
 
 ### JSONB Containment Query
 
-When you provide `metadataTags: { userId: "alice", category: "preference" }`, the system generates:
+When you provide `metadataTags: { category: "preference", priority: "high" }`, the system generates:
 
 ```sql
 SELECT *
 FROM memory_nodes
-WHERE metadata @> '{"userId": "alice", "category": "preference"}'::jsonb
+WHERE metadata @> '{"category": "preference", "priority": "high"}'::jsonb
   AND embedding IS NOT NULL
   AND 1 - (embedding <=> $1::vector) >= 0.7
 ORDER BY embedding <=> $1::vector
@@ -274,25 +274,25 @@ const tools = createSouvenirTools(souvenir);
 
 // Test 1: Store with metadata
 await tools.storeMemory.execute({
-  content: "Alice likes TypeScript",
-  metadata: { userId: "alice", language: "TypeScript" },
+  content: "Using TypeScript for the backend API",
+  metadata: { project: "backend", language: "TypeScript" },
   processImmediately: true,
 });
 
 await tools.storeMemory.execute({
-  content: "Bob likes Python",
-  metadata: { userId: "bob", language: "Python" },
+  content: "Using React for the frontend UI",
+  metadata: { project: "frontend", language: "JavaScript" },
   processImmediately: true,
 });
 
 // Test 2: Search with metadata filter
 const result = await tools.searchMemory.execute({
-  query: "programming language",
-  metadataTags: { userId: "alice" },
+  query: "programming",
+  metadataTags: { project: "backend" },
 });
 
 console.log(result.memory);
-// Should contain "TypeScript" but NOT "Python"
+// Should contain "TypeScript" but NOT "React"
 ```
 
 ### Expected Behavior

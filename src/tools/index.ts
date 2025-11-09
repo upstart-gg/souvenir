@@ -40,7 +40,7 @@ export function createSouvenirTools(souvenir: Souvenir): {
       .record(z.string(), z.unknown())
       .optional()
       .describe(
-        "Filter results by metadata tags (e.g., {userId: 'alice', category: 'preference'})",
+        "Filter results by metadata tags (e.g., {category: 'preference', priority: 'high'})",
       ),
   });
 
