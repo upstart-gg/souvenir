@@ -1,6 +1,6 @@
 {
   "name": "@upstart.gg/souvenir",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Memory management system for AI agents built with the Vercel AI SDK",
   "type": "module",
   "main": "./dist/index.js",
