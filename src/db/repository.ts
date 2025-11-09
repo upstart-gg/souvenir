@@ -121,7 +121,9 @@ export class MemoryRepository {
 
     // Add node type filter
     if (nodeTypes && nodeTypes.length > 0) {
-      const types = nodeTypes.map(t => `'${t.replace(/'/g, "''")}'`).join(", ");
+      const types = nodeTypes
+        .map((t) => `'${t.replace(/'/g, "''")}'`)
+        .join(", ");
       queryStr += `\n        AND node_type IN (${types})`;
     }
 
